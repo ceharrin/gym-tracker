@@ -1,0 +1,11 @@
+# Learn more https://docs.github.com/en/get-started/getting-started-with-git/ignoring-files
+
+# claude
+.claude/
+
+# build files
+build/
+
+# Mac OSX
+.DS_Store
+GymTracker.xcodeproj
