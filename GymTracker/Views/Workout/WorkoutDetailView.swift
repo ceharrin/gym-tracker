@@ -6,70 +6,69 @@ struct WorkoutDetailView: View {
     @ObservedObject var workout: CDWorkout
 
     @State private var showingEdit = false
+    @State private var showingDuplicate = false
     @State private var showingDeleteAlert = false
-    /// Raised before Core Data deletion so the body stops reading workout properties
-    /// before `objectWillChange` triggers a re-render on the invalidated object.
     @State private var isDeleting = false
 
     var body: some View {
         Group {
             if isDeleting {
-                // Blank placeholder — keeps the view alive just long enough for
-                // dismiss() to animate, without touching the deleted managed object.
                 Color.clear
             } else {
-                content
-            }
-        }
-        .sheet(isPresented: $showingEdit) {
-            LogWorkoutView(workout: workout)
-        }
-        .alert("Delete Workout?", isPresented: $showingDeleteAlert) {
-            Button("Delete", role: .destructive) {
-                isDeleting = true          // drop all property reads first
-                context.delete(workout)
-                try? context.save()
-                dismiss()
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This will permanently delete \"\(workout.title)\" and cannot be undone.")
-        }
-    }
-
-    private var content: some View {
-        ScrollView {
-            VStack(spacing: 20) {
-                metaCard
-                ForEach(workout.sortedEntries) { entry in
-                    EntryDetailCard(entry: entry)
-                }
-                if let notes = workout.notes, !notes.isEmpty {
-                    notesCard(notes)
+                ScrollView {
+                    VStack(spacing: 20) {
+                        metaCard
+                        ForEach(workout.sortedEntries) { entry in
+                            EntryDetailCard(entry: entry)
+                        }
+                        if let notes = workout.notes, !notes.isEmpty {
+                            notesCard(notes)
+                        }
+                    }
+                    .padding()
                 }
             }
-            .padding()
         }
         .navigationTitle(workout.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Menu {
+                    Button("Edit") { showingEdit = true }
+                    Button("Duplicate") { showingDuplicate = true }
                     Button {
                         let html = WorkoutHTMLFormatter.singleWorkoutHTML(workout: workout)
                         PrintCoordinator.printHTML(html, jobName: workout.title)
                     } label: {
                         Label("Print", systemImage: "printer")
                     }
-                    Button("Edit") { showingEdit = true }
                     Divider()
-                    Button("Delete Workout", role: .destructive) {
+                    Button(role: .destructive) {
                         showingDeleteAlert = true
+                    } label: {
+                        Label("Delete", systemImage: "trash")
                     }
                 } label: {
                     Image(systemName: "ellipsis.circle")
                 }
             }
+        }
+        .alert("Delete Workout?", isPresented: $showingDeleteAlert) {
+            Button("Delete", role: .destructive) {
+                isDeleting = true
+                context.delete(workout)
+                try? context.save()
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This workout and all its sets will be permanently deleted.")
+        }
+        .sheet(isPresented: $showingEdit) {
+            LogWorkoutView(workout: workout)
+        }
+        .sheet(isPresented: $showingDuplicate) {
+            LogWorkoutView(workout: workout, isDuplicate: true)
         }
     }
 
@@ -143,8 +142,13 @@ struct WorkoutDetailView: View {
     }
 }
 
+// MARK: - Entry Card
+
 struct EntryDetailCard: View {
-    let entry: CDWorkoutEntry
+    @Environment(\.managedObjectContext) private var context
+    @ObservedObject var entry: CDWorkoutEntry
+
+    @State private var isEditing = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -156,12 +160,17 @@ struct EntryDetailCard: View {
                 Text(entry.activity?.name ?? "Unknown")
                     .font(.headline)
                 Spacer()
-                if let muscles = entry.activity?.muscleGroups, !muscles.isEmpty {
+                if let muscles = entry.activity?.muscleGroups, !muscles.isEmpty, !isEditing {
                     Text(muscles)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
+                Button(isEditing ? "Done" : "Edit") {
+                    isEditing.toggle()
+                }
+                .font(.subheadline)
+                .foregroundStyle(isEditing ? Color.accentColor : .secondary)
             }
 
             Divider()
@@ -175,7 +184,11 @@ struct EntryDetailCard: View {
                 VStack(spacing: 6) {
                     setHeaderRow(metric: entry.activity?.metric ?? .weightReps)
                     ForEach(sets) { set in
-                        SetDisplayRow(set: set, metric: entry.activity?.metric ?? .weightReps)
+                        SetDisplayRow(
+                            set: set,
+                            metric: entry.activity?.metric ?? .weightReps,
+                            onDelete: isEditing ? { deleteSet(set) } : nil
+                        )
                     }
                 }
             }
@@ -183,6 +196,14 @@ struct EntryDetailCard: View {
         .padding(16)
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func deleteSet(_ set: CDEntrySet) {
+        context.delete(set)
+        for (i, s) in entry.sortedSets.enumerated() {
+            s.setNumber = Int16(i + 1)
+        }
+        try? context.save()
     }
 
     @ViewBuilder
@@ -206,10 +227,9 @@ struct EntryDetailCard: View {
             case .custom:
                 Text("Value").frame(maxWidth: .infinity, alignment: .center)
             }
-            // Aligns with trophy badge on each set row
-            Image(systemName: "trophy")
-                .frame(width: 28)
-                .foregroundStyle(.clear)
+            if isEditing {
+                Color.clear.frame(width: 28)
+            }
         }
         .font(.caption)
         .foregroundStyle(.secondary)
@@ -217,9 +237,12 @@ struct EntryDetailCard: View {
     }
 }
 
+// MARK: - Set Row
+
 struct SetDisplayRow: View {
     let set: CDEntrySet
     let metric: PrimaryMetric
+    var onDelete: (() -> Void)? = nil
 
     var body: some View {
         HStack {
@@ -252,10 +275,21 @@ struct SetDisplayRow: View {
                 Text(set.customValue > 0 ? String(format: "%.1f %@", set.customValue, set.customLabel ?? "") : "—")
                     .frame(maxWidth: .infinity, alignment: .center)
             }
-            Image(systemName: set.isPRAttempt ? "trophy.fill" : "trophy")
-                .font(.caption)
-                .foregroundStyle(set.isPRAttempt ? .yellow : .clear)
-                .frame(width: 28)
+            if set.isPRAttempt {
+                Image(systemName: "trophy.fill")
+                    .foregroundStyle(.yellow)
+                    .font(.caption)
+                    .frame(width: 20)
+            }
+            if let onDelete {
+                Button(action: onDelete) {
+                    Image(systemName: "trash")
+                        .font(.caption)
+                        .foregroundStyle(.red.opacity(0.7))
+                        .frame(width: 28)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .font(.subheadline)
     }
