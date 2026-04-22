@@ -88,7 +88,7 @@ enum WorkoutHTMLFormatter {
     private static func summaryWorkoutBlock(workout: CDWorkout) -> String {
         let dateStr = mediumDate(workout.date)
         let activities = workout.activitySummary
-        let html = """
+        var html = """
         <div class="summary-workout">
             <strong>\(escape(workout.title))</strong>
             <span class="meta"> &mdash; \(dateStr)\(workout.durationMinutes > 0 ? " &bull; \(workout.durationMinutes) min" : "")</span>

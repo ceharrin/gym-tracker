@@ -104,9 +104,10 @@ struct HomeView: View {
                 .font(.headline)
                 .frame(maxWidth: .infinity)
                 .padding()
+                .background(Color.accentColor)
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
         }
-        .buttonStyle(.borderedProminent)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
     private var recentSection: some View {

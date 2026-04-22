@@ -45,9 +45,11 @@ struct LogWorkoutView: View {
     @Environment(\.dismiss) private var dismiss
 
     let existingWorkout: CDWorkout?
+    let isDuplicate: Bool
 
-    init(workout: CDWorkout? = nil) {
+    init(workout: CDWorkout? = nil, isDuplicate: Bool = false) {
         self.existingWorkout = workout
+        self.isDuplicate = isDuplicate
     }
 
     @State private var title: String = ""
@@ -84,7 +86,7 @@ struct LogWorkoutView: View {
                     }
                 }
             }
-            .navigationTitle(existingWorkout == nil ? "Log Workout" : "Edit Workout")
+            .navigationTitle(isDuplicate ? "Duplicate Workout" : (existingWorkout == nil ? "Log Workout" : "Edit Workout"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -106,6 +108,10 @@ struct LogWorkoutView: View {
                 startTime = Date()
                 if let w = existingWorkout {
                     loadWorkout(w)
+                    if isDuplicate {
+                        workoutDate = Date()
+                        durationMinutes = ""
+                    }
                 } else {
                     let fmt = DateFormatter()
                     fmt.dateFormat = "EEEE"
@@ -196,9 +202,10 @@ struct LogWorkoutView: View {
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(16)
+                    .background(Color.accentColor)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
             }
-            .buttonStyle(.borderedProminent)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
         }
     }
 
@@ -225,7 +232,6 @@ struct LogWorkoutView: View {
                 s.customValue = set.customValue > 0   ? String(format: "%.1f", set.customValue)                               : ""
                 s.customLabel = set.customLabel ?? ""
                 s.notes       = set.notes ?? ""
-                s.isPRAttempt = set.isPRAttempt
                 return s
             }
             return LiveEntry(activity: activity, sets: liveSets.isEmpty ? [LiveSet()] : liveSets, notes: entry.notes ?? "")
@@ -239,7 +245,7 @@ struct LogWorkoutView: View {
         let newPRNames = detectPRs()
 
         let workout: CDWorkout
-        if let existing = existingWorkout {
+        if let existing = existingWorkout, !isDuplicate {
             workout = existing
             for entry in existing.sortedEntries {
                 entry.sortedSets.forEach { context.delete($0) }
@@ -276,7 +282,6 @@ struct LogWorkoutView: View {
                 set.customValue = Double(liveSet.customValue) ?? 0
                 set.customLabel = liveSet.customLabel.isEmpty ? nil : liveSet.customLabel
                 set.notes = liveSet.notes.isEmpty ? nil : liveSet.notes
-                set.isPRAttempt = liveSet.isPRAttempt
                 set.entry = entry
             }
         }
@@ -331,20 +336,24 @@ struct LiveEntryCard: View {
     @Binding var entry: LiveEntry
     let onDelete: () -> Void
 
+    @State private var isEditing = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             entryHeader
             Divider()
             setHeader
-            ForEach($entry.sets) { $set in
-                LiveSetRow(set: $set, metric: entry.activity.metric, setNumber: setNumber(for: set))
-                    .swipeActions(edge: .trailing) {
-                        Button(role: .destructive) {
-                            entry.sets.removeAll { $0.id == set.id }
-                        } label: {
-                            Label("Delete", systemImage: "trash")
-                        }
+            ForEach(entry.sets.indices, id: \.self) { idx in
+                LiveSetRow(
+                    set: $entry.sets[idx],
+                    metric: entry.activity.metric,
+                    setNumber: idx + 1,
+                    canDelete: isEditing,
+                    onDelete: {
+                        guard entry.sets.count > 1 else { return }
+                        entry.sets.remove(at: idx)
                     }
+                )
             }
             addSetButton
         }
@@ -360,6 +369,11 @@ struct LiveEntryCard: View {
             Text(entry.activity.name)
                 .font(.headline)
             Spacer()
+            Button(isEditing ? "Done" : "Edit") {
+                isEditing.toggle()
+            }
+            .font(.subheadline)
+            .foregroundStyle(isEditing ? Color.accentColor : .secondary)
             Button(role: .destructive, action: onDelete) {
                 Image(systemName: "xmark.circle.fill")
                     .foregroundStyle(.secondary)
@@ -388,9 +402,11 @@ struct LiveEntryCard: View {
             case .custom:
                 Text("Value").frame(maxWidth: .infinity, alignment: .center)
             }
-            // Trophy column header — aligns with the trophy toggle on each set row
             Image(systemName: "trophy")
                 .frame(width: 36)
+            if isEditing {
+                Color.clear.frame(width: 28)
+            }
         }
         .font(.caption)
         .foregroundStyle(.secondary)
@@ -414,9 +430,6 @@ struct LiveEntryCard: View {
         .buttonStyle(.plain)
     }
 
-    private func setNumber(for set: LiveSet) -> Int {
-        (entry.sets.firstIndex { $0.id == set.id } ?? 0) + 1
-    }
 }
 
 // MARK: - Live Set Row
@@ -425,6 +438,8 @@ struct LiveSetRow: View {
     @Binding var set: LiveSet
     let metric: PrimaryMetric
     let setNumber: Int
+    var canDelete: Bool = false
+    var onDelete: (() -> Void)? = nil
 
     var body: some View {
         HStack(alignment: .center, spacing: 8) {
@@ -471,6 +486,16 @@ struct LiveSetRow: View {
                     .contentTransition(.symbolEffect(.replace))
             }
             .buttonStyle(.plain)
+
+            if canDelete, let onDelete {
+                Button(action: onDelete) {
+                    Image(systemName: "minus.circle.fill")
+                        .foregroundStyle(.red)
+                        .font(.body)
+                        .frame(width: 28)
+                }
+                .buttonStyle(.plain)
+            }
         }
     }
 

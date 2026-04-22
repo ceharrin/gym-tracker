@@ -16,12 +16,11 @@ struct PersistenceController {
             guard let description = container.persistentStoreDescriptions.first else {
                 fatalError("No persistent store descriptions found")
             }
-            // cloudKitContainerOptions is intentionally not set here.
-            // Per Apple's docs, a store description without cloudKitContainerOptions does not
-            // participate in CloudKit mirroring — data stays local and no network calls are made.
-            // To enable sync: add an iCloud container in Xcode → Signing & Capabilities → iCloud,
-            // then set cloudKitContainerOptions with that container's identifier.
+            // Disabled until the iCloud container is registered in the Developer Portal.
+            // Remove this line and add cloudKitContainerOptions to re-enable sync.
+            description.cloudKitContainerOptions = nil
             description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
+            description.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
         }
 
         container.loadPersistentStores { _, error in
