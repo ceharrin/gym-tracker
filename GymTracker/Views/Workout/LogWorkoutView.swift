@@ -196,10 +196,9 @@ struct LogWorkoutView: View {
                     .font(.headline)
                     .frame(maxWidth: .infinity)
                     .padding(16)
-                    .background(Color.accentColor)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
             }
+            .buttonStyle(.borderedProminent)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
         }
     }
 
@@ -226,6 +225,7 @@ struct LogWorkoutView: View {
                 s.customValue = set.customValue > 0   ? String(format: "%.1f", set.customValue)                               : ""
                 s.customLabel = set.customLabel ?? ""
                 s.notes       = set.notes ?? ""
+                s.isPRAttempt = set.isPRAttempt
                 return s
             }
             return LiveEntry(activity: activity, sets: liveSets.isEmpty ? [LiveSet()] : liveSets, notes: entry.notes ?? "")
@@ -276,6 +276,7 @@ struct LogWorkoutView: View {
                 set.customValue = Double(liveSet.customValue) ?? 0
                 set.customLabel = liveSet.customLabel.isEmpty ? nil : liveSet.customLabel
                 set.notes = liveSet.notes.isEmpty ? nil : liveSet.notes
+                set.isPRAttempt = liveSet.isPRAttempt
                 set.entry = entry
             }
         }

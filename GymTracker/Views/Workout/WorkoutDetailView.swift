@@ -2,11 +2,42 @@ import SwiftUI
 
 struct WorkoutDetailView: View {
     @Environment(\.managedObjectContext) private var context
-    let workout: CDWorkout
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var workout: CDWorkout
 
     @State private var showingEdit = false
+    @State private var showingDeleteAlert = false
+    /// Raised before Core Data deletion so the body stops reading workout properties
+    /// before `objectWillChange` triggers a re-render on the invalidated object.
+    @State private var isDeleting = false
 
     var body: some View {
+        Group {
+            if isDeleting {
+                // Blank placeholder — keeps the view alive just long enough for
+                // dismiss() to animate, without touching the deleted managed object.
+                Color.clear
+            } else {
+                content
+            }
+        }
+        .sheet(isPresented: $showingEdit) {
+            LogWorkoutView(workout: workout)
+        }
+        .alert("Delete Workout?", isPresented: $showingDeleteAlert) {
+            Button("Delete", role: .destructive) {
+                isDeleting = true          // drop all property reads first
+                context.delete(workout)
+                try? context.save()
+                dismiss()
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This will permanently delete \"\(workout.title)\" and cannot be undone.")
+        }
+    }
+
+    private var content: some View {
         ScrollView {
             VStack(spacing: 20) {
                 metaCard
@@ -23,19 +54,22 @@ struct WorkoutDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                HStack(spacing: 16) {
+                Menu {
                     Button {
                         let html = WorkoutHTMLFormatter.singleWorkoutHTML(workout: workout)
                         PrintCoordinator.printHTML(html, jobName: workout.title)
                     } label: {
-                        Image(systemName: "printer")
+                        Label("Print", systemImage: "printer")
                     }
                     Button("Edit") { showingEdit = true }
+                    Divider()
+                    Button("Delete Workout", role: .destructive) {
+                        showingDeleteAlert = true
+                    }
+                } label: {
+                    Image(systemName: "ellipsis.circle")
                 }
             }
-        }
-        .sheet(isPresented: $showingEdit) {
-            LogWorkoutView(workout: workout)
         }
     }
 
@@ -172,6 +206,10 @@ struct EntryDetailCard: View {
             case .custom:
                 Text("Value").frame(maxWidth: .infinity, alignment: .center)
             }
+            // Aligns with trophy badge on each set row
+            Image(systemName: "trophy")
+                .frame(width: 28)
+                .foregroundStyle(.clear)
         }
         .font(.caption)
         .foregroundStyle(.secondary)
@@ -214,6 +252,10 @@ struct SetDisplayRow: View {
                 Text(set.customValue > 0 ? String(format: "%.1f %@", set.customValue, set.customLabel ?? "") : "—")
                     .frame(maxWidth: .infinity, alignment: .center)
             }
+            Image(systemName: set.isPRAttempt ? "trophy.fill" : "trophy")
+                .font(.caption)
+                .foregroundStyle(set.isPRAttempt ? .yellow : .clear)
+                .frame(width: 28)
         }
         .font(.subheadline)
     }
