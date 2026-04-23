@@ -140,22 +140,4 @@ final class LiveSetTests: XCTestCase {
         XCTAssertEqual(filterNumericInput("45.0 min", allowDecimal: false), "450")
     }
 
-    // MARK: - isWarmup on LiveSet
-
-    func test_liveSet_isWarmup_defaultsFalse() {
-        XCTAssertFalse(LiveSet().isWarmup)
-    }
-
-    func test_copying_doesNotCopyIsWarmup() {
-        var original = LiveSet()
-        original.isWarmup = true
-        let copy = LiveSet.copying(original)
-        XCTAssertFalse(copy.isWarmup, "isWarmup must not be copied — each set earns its own warm-up status")
-    }
-
-    func test_copying_warmupFalse_remainsFalseInCopy() {
-        let original = LiveSet()   // isWarmup defaults false
-        let copy = LiveSet.copying(original)
-        XCTAssertFalse(copy.isWarmup)
-    }
 }

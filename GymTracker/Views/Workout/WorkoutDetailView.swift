@@ -226,18 +226,11 @@ struct SetDisplayRow: View {
 
     var body: some View {
         HStack {
-            Group {
-                if set.isWarmup {
-                    Text("W")
-                        .foregroundStyle(.orange)
-                } else {
-                    Text("\(set.setNumber)")
-                        .foregroundStyle(.secondary)
-                }
-            }
-            .font(.subheadline)
-            .fontWeight(.medium)
-            .frame(width: 36, alignment: .leading)
+            Text("\(set.setNumber)")
+                .font(.subheadline)
+                .fontWeight(.medium)
+                .foregroundStyle(.secondary)
+                .frame(width: 36, alignment: .leading)
             Spacer()
             switch metric {
             case .weightReps:

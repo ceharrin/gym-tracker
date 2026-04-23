@@ -168,50 +168,6 @@ final class WorkoutBugTests: XCTestCase {
         XCTAssertEqual(remaining[0].title, "Keep Me")
     }
 
-    // MARK: - isWarmup persistence
-
-    func test_isWarmup_defaultIsFalse() {
-        let s = CDEntrySet(context: context)
-        XCTAssertFalse(s.isWarmup)
-    }
-
-    func test_isWarmup_trueRoundsTripThroughCoreData() throws {
-        let workout = makeWorkout()
-        let entry = makeEntry(workout: workout, activity: makeActivity())
-        let set = makeSet(entry: entry)
-        set.isWarmup = true
-        try context.save()
-
-        let fetched = try context.fetch(CDEntrySet.fetchRequest())
-        XCTAssertTrue(fetched[0].isWarmup)
-        _ = set
-    }
-
-    func test_isWarmup_falseRoundsTripThroughCoreData() throws {
-        let workout = makeWorkout()
-        let entry = makeEntry(workout: workout, activity: makeActivity())
-        let set = makeSet(entry: entry)
-        set.isWarmup = false
-        try context.save()
-
-        let fetched = try context.fetch(CDEntrySet.fetchRequest())
-        XCTAssertFalse(fetched[0].isWarmup)
-        _ = set
-    }
-
-    func test_isWarmup_independentOfIsPRAttempt() throws {
-        let workout = makeWorkout()
-        let entry = makeEntry(workout: workout, activity: makeActivity())
-        let set = makeSet(entry: entry, isPRAttempt: true)
-        set.isWarmup = true
-        try context.save()
-
-        let fetched = try context.fetch(CDEntrySet.fetchRequest())
-        XCTAssertTrue(fetched[0].isWarmup)
-        XCTAssertTrue(fetched[0].isPRAttempt)
-        _ = set
-    }
-
     // MARK: - Workout reactivity (Core Data update propagation)
 
     func test_addEntryToSavedWorkout_sortedEntriesReflectsAddition() throws {

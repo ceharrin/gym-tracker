@@ -15,7 +15,6 @@ struct LiveSet: Identifiable {
     var customLabel: String = ""
     var notes: String = ""
     var isPRAttempt: Bool = false
-    var isWarmup: Bool = false
 
     static func copying(_ other: LiveSet) -> LiveSet {
         var s = LiveSet()
@@ -27,7 +26,6 @@ struct LiveSet: Identifiable {
         s.laps = other.laps
         s.customValue = other.customValue
         s.customLabel = other.customLabel
-        // isPRAttempt and isWarmup intentionally NOT copied — each set earns its own state
         return s
     }
 }
@@ -247,7 +245,6 @@ struct LogWorkoutView: View {
                 s.customValue = set.customValue > 0   ? String(format: "%.1f", set.customValue)                               : ""
                 s.customLabel = set.customLabel ?? ""
                 s.notes       = set.notes ?? ""
-                s.isWarmup    = set.isWarmup
                 return s
             }
             return LiveEntry(activity: activity, sets: liveSets.isEmpty ? [LiveSet()] : liveSets, notes: entry.notes ?? "")
@@ -298,7 +295,6 @@ struct LogWorkoutView: View {
                 set.customValue = Double(liveSet.customValue) ?? 0
                 set.customLabel = liveSet.customLabel.isEmpty ? nil : liveSet.customLabel
                 set.notes = liveSet.notes.isEmpty ? nil : liveSet.notes
-                set.isWarmup = liveSet.isWarmup
                 set.entry = entry
             }
         }
@@ -359,25 +355,32 @@ struct LiveEntryCard: View {
     @Binding var entry: LiveEntry
     let onDelete: () -> Void
 
-    @State private var isEditing = false
-
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             entryHeader
             Divider()
             setHeader
-            ForEach(entry.sets.indices, id: \.self) { idx in
-                LiveSetRow(
-                    set: $entry.sets[idx],
-                    metric: entry.activity.metric,
-                    setNumber: idx + 1,
-                    canDelete: isEditing,
-                    onDelete: {
-                        guard entry.sets.count > 1 else { return }
-                        entry.sets.remove(at: idx)
-                    }
-                )
+            List {
+                ForEach(entry.sets.indices, id: \.self) { idx in
+                    LiveSetRow(
+                        set: $entry.sets[idx],
+                        metric: entry.activity.metric,
+                        setNumber: idx + 1
+                    )
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
+                    .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: 0))
+                }
+                .onDelete { indices in
+                    guard entry.sets.count > indices.count else { return }
+                    entry.sets.remove(atOffsets: indices)
+                }
             }
+            .listStyle(.plain)
+            .scrollDisabled(true)
+            .scrollContentBackground(.hidden)
+            .background(Color.clear)
+            .frame(height: CGFloat(entry.sets.count) * 50)
             addSetButton
         }
         .padding(16)
@@ -392,11 +395,6 @@ struct LiveEntryCard: View {
             Text(entry.activity.name)
                 .font(.headline)
             Spacer()
-            Button(isEditing ? "Done" : "Edit") {
-                isEditing.toggle()
-            }
-            .font(.subheadline)
-            .foregroundStyle(isEditing ? Color.accentColor : .secondary)
             Button(role: .destructive, action: onDelete) {
                 Image(systemName: "xmark.circle.fill")
                     .foregroundStyle(.secondary)
@@ -425,13 +423,8 @@ struct LiveEntryCard: View {
             case .custom:
                 Text("Value").frame(maxWidth: .infinity, alignment: .center)
             }
-            Text("W")
-                .frame(width: 28)
             Image(systemName: "trophy")
                 .frame(width: 36)
-            if isEditing {
-                Color.clear.frame(width: 28)
-            }
         }
         .font(.caption)
         .foregroundStyle(.secondary)
@@ -463,8 +456,6 @@ struct LiveSetRow: View {
     @Binding var set: LiveSet
     let metric: PrimaryMetric
     let setNumber: Int
-    var canDelete: Bool = false
-    var onDelete: (() -> Void)? = nil
 
     var body: some View {
         HStack(alignment: .center, spacing: 8) {
@@ -500,22 +491,6 @@ struct LiveSetRow: View {
                 inputField($set.customLabel, placeholder: "unit", keyboard: .default)
             }
 
-            // Warm-up toggle
-            Button {
-                set.isWarmup.toggle()
-            } label: {
-                Text("W")
-                    .font(.caption)
-                    .fontWeight(.bold)
-                    .foregroundStyle(set.isWarmup ? .white : .secondary)
-                    .frame(width: 24, height: 24)
-                    .background(set.isWarmup ? Color.orange : Color.clear)
-                    .clipShape(Circle())
-                    .overlay(Circle().stroke(set.isWarmup ? Color.clear : Color.secondary.opacity(0.4), lineWidth: 1))
-                    .contentTransition(.symbolEffect(.replace))
-            }
-            .buttonStyle(.plain)
-
             // PR attempt toggle
             Button {
                 set.isPRAttempt.toggle()
@@ -528,15 +503,6 @@ struct LiveSetRow: View {
             }
             .buttonStyle(.plain)
 
-            if canDelete, let onDelete {
-                Button(action: onDelete) {
-                    Image(systemName: "minus.circle.fill")
-                        .foregroundStyle(.red)
-                        .font(.body)
-                        .frame(width: 28)
-                }
-                .buttonStyle(.plain)
-            }
         }
     }
 
