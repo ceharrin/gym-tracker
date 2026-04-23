@@ -124,4 +124,38 @@ final class LiveSetTests: XCTestCase {
         let copy = LiveSet.copying(original)
         XCTAssertFalse(copy.isPRAttempt)
     }
+
+    // MARK: - Duration field filtering
+
+    func test_filter_durationMinutes_stripsDecimal() {
+        // User pastes "2.5" into duration minutes — decimal must be removed
+        XCTAssertEqual(filterNumericInput("2.5", allowDecimal: false), "25")
+    }
+
+    func test_filter_durationMinutes_stripsNonNumeric() {
+        XCTAssertEqual(filterNumericInput("5min", allowDecimal: false), "5")
+    }
+
+    func test_filter_workoutDuration_stripsLetterAndDecimal() {
+        XCTAssertEqual(filterNumericInput("45.0 min", allowDecimal: false), "450")
+    }
+
+    // MARK: - isWarmup on LiveSet
+
+    func test_liveSet_isWarmup_defaultsFalse() {
+        XCTAssertFalse(LiveSet().isWarmup)
+    }
+
+    func test_copying_doesNotCopyIsWarmup() {
+        var original = LiveSet()
+        original.isWarmup = true
+        let copy = LiveSet.copying(original)
+        XCTAssertFalse(copy.isWarmup, "isWarmup must not be copied — each set earns its own warm-up status")
+    }
+
+    func test_copying_warmupFalse_remainsFalseInCopy() {
+        let original = LiveSet()   // isWarmup defaults false
+        let copy = LiveSet.copying(original)
+        XCTAssertFalse(copy.isWarmup)
+    }
 }

@@ -15,6 +15,7 @@ struct LiveSet: Identifiable {
     var customLabel: String = ""
     var notes: String = ""
     var isPRAttempt: Bool = false
+    var isWarmup: Bool = false
 
     static func copying(_ other: LiveSet) -> LiveSet {
         var s = LiveSet()
@@ -26,7 +27,7 @@ struct LiveSet: Identifiable {
         s.laps = other.laps
         s.customValue = other.customValue
         s.customLabel = other.customLabel
-        // isPRAttempt intentionally NOT copied — each set earns its own trophy
+        // isPRAttempt and isWarmup intentionally NOT copied — each set earns its own state
         return s
     }
 }
@@ -153,6 +154,10 @@ struct LogWorkoutView: View {
                         .foregroundStyle(.secondary)
                     TextField("Duration (min)", text: $durationMinutes)
                         .keyboardType(.numberPad)
+                        .onChange(of: durationMinutes) { _, v in
+                            let f = filterNumericInput(v, allowDecimal: false)
+                            if f != v { durationMinutes = f }
+                        }
                 }
                 .padding(12)
                 .background(Color(.secondarySystemBackground))
@@ -242,6 +247,7 @@ struct LogWorkoutView: View {
                 s.customValue = set.customValue > 0   ? String(format: "%.1f", set.customValue)                               : ""
                 s.customLabel = set.customLabel ?? ""
                 s.notes       = set.notes ?? ""
+                s.isWarmup    = set.isWarmup
                 return s
             }
             return LiveEntry(activity: activity, sets: liveSets.isEmpty ? [LiveSet()] : liveSets, notes: entry.notes ?? "")
@@ -292,6 +298,7 @@ struct LogWorkoutView: View {
                 set.customValue = Double(liveSet.customValue) ?? 0
                 set.customLabel = liveSet.customLabel.isEmpty ? nil : liveSet.customLabel
                 set.notes = liveSet.notes.isEmpty ? nil : liveSet.notes
+                set.isWarmup = liveSet.isWarmup
                 set.entry = entry
             }
         }
@@ -418,6 +425,8 @@ struct LiveEntryCard: View {
             case .custom:
                 Text("Value").frame(maxWidth: .infinity, alignment: .center)
             }
+            Text("W")
+                .frame(width: 28)
             Image(systemName: "trophy")
                 .frame(width: 36)
             if isEditing {
@@ -490,6 +499,22 @@ struct LiveSetRow: View {
                 inputField($set.customValue, placeholder: "0", keyboard: .decimalPad)
                 inputField($set.customLabel, placeholder: "unit", keyboard: .default)
             }
+
+            // Warm-up toggle
+            Button {
+                set.isWarmup.toggle()
+            } label: {
+                Text("W")
+                    .font(.caption)
+                    .fontWeight(.bold)
+                    .foregroundStyle(set.isWarmup ? .white : .secondary)
+                    .frame(width: 24, height: 24)
+                    .background(set.isWarmup ? Color.orange : Color.clear)
+                    .clipShape(Circle())
+                    .overlay(Circle().stroke(set.isWarmup ? Color.clear : Color.secondary.opacity(0.4), lineWidth: 1))
+                    .contentTransition(.symbolEffect(.replace))
+            }
+            .buttonStyle(.plain)
 
             // PR attempt toggle
             Button {

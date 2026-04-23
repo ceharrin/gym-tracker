@@ -145,10 +145,7 @@ struct WorkoutDetailView: View {
 // MARK: - Entry Card
 
 struct EntryDetailCard: View {
-    @Environment(\.managedObjectContext) private var context
     @ObservedObject var entry: CDWorkoutEntry
-
-    @State private var isEditing = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -160,17 +157,12 @@ struct EntryDetailCard: View {
                 Text(entry.activity?.name ?? "Unknown")
                     .font(.headline)
                 Spacer()
-                if let muscles = entry.activity?.muscleGroups, !muscles.isEmpty, !isEditing {
+                if let muscles = entry.activity?.muscleGroups, !muscles.isEmpty {
                     Text(muscles)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
-                Button(isEditing ? "Done" : "Edit") {
-                    isEditing.toggle()
-                }
-                .font(.subheadline)
-                .foregroundStyle(isEditing ? Color.accentColor : .secondary)
             }
 
             Divider()
@@ -186,8 +178,7 @@ struct EntryDetailCard: View {
                     ForEach(sets) { set in
                         SetDisplayRow(
                             set: set,
-                            metric: entry.activity?.metric ?? .weightReps,
-                            onDelete: isEditing ? { deleteSet(set) } : nil
+                            metric: entry.activity?.metric ?? .weightReps
                         )
                     }
                 }
@@ -196,14 +187,6 @@ struct EntryDetailCard: View {
         .padding(16)
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16))
-    }
-
-    private func deleteSet(_ set: CDEntrySet) {
-        context.delete(set)
-        for (i, s) in entry.sortedSets.filter({ !$0.isDeleted }).enumerated() {
-            s.setNumber = Int16(i + 1)
-        }
-        try? context.save()
     }
 
     @ViewBuilder
@@ -227,9 +210,6 @@ struct EntryDetailCard: View {
             case .custom:
                 Text("Value").frame(maxWidth: .infinity, alignment: .center)
             }
-            if isEditing {
-                Color.clear.frame(width: 28)
-            }
         }
         .font(.caption)
         .foregroundStyle(.secondary)
@@ -246,11 +226,18 @@ struct SetDisplayRow: View {
 
     var body: some View {
         HStack {
-            Text("\(set.setNumber)")
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .foregroundStyle(.secondary)
-                .frame(width: 36, alignment: .leading)
+            Group {
+                if set.isWarmup {
+                    Text("W")
+                        .foregroundStyle(.orange)
+                } else {
+                    Text("\(set.setNumber)")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .font(.subheadline)
+            .fontWeight(.medium)
+            .frame(width: 36, alignment: .leading)
             Spacer()
             switch metric {
             case .weightReps:

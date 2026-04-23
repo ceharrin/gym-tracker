@@ -70,6 +70,7 @@ final class WorkoutSaveTests: XCTestCase {
                 set.customValue = Double(liveSet.customValue) ?? 0
                 set.customLabel = liveSet.customLabel.isEmpty ? nil : liveSet.customLabel
                 set.notes = liveSet.notes.isEmpty ? nil : liveSet.notes
+                set.isWarmup = liveSet.isWarmup
                 set.entry = entry
             }
         }
@@ -119,6 +120,7 @@ final class WorkoutSaveTests: XCTestCase {
                 set.customValue = Double(liveSet.customValue) ?? 0
                 set.customLabel = liveSet.customLabel.isEmpty ? nil : liveSet.customLabel
                 set.notes = liveSet.notes.isEmpty ? nil : liveSet.notes
+                set.isWarmup = liveSet.isWarmup
                 set.entry = entry
             }
         }
@@ -487,6 +489,39 @@ final class WorkoutSaveTests: XCTestCase {
         let a = makeActivity(name: "Plank", metric: .duration)
         let w = try saveNewWorkout(title: "Test", entries: [(a, [liveSet(durationMinutes: "x", durationSeconds: "y")], "")])
         XCTAssertEqual(w.sortedEntries.first?.sortedSets.first?.durationSeconds, 0)
+    }
+
+    // MARK: - Warm-up flag
+
+    func test_save_set_isWarmup_defaultFalse() throws {
+        let a = makeActivity()
+        let w = try saveNewWorkout(title: "Test", entries: [(a, [liveSet()], "")])
+        XCTAssertFalse(w.sortedEntries.first?.sortedSets.first?.isWarmup ?? true)
+    }
+
+    func test_save_set_isWarmup_persistsTrue() throws {
+        let a = makeActivity()
+        var warmSet = liveSet(weightKg: "40", reps: "15")
+        warmSet.isWarmup = true
+        let w = try saveNewWorkout(title: "Test", entries: [(a, [warmSet], "")])
+        context.refreshAllObjects()
+
+        let sets = try context.fetch(CDEntrySet.fetchRequest())
+        XCTAssertTrue(sets.first?.isWarmup ?? false, "isWarmup=true must survive a context refresh")
+        _ = w
+    }
+
+    func test_save_mixedSets_warmupFlagCorrectPerSet() throws {
+        let a = makeActivity()
+        var warmSet = liveSet(weightKg: "40", reps: "15")
+        warmSet.isWarmup = true
+        let workSet = liveSet(weightKg: "100", reps: "5")
+        let w = try saveNewWorkout(title: "Test", entries: [(a, [warmSet, workSet], "")])
+
+        let sets = w.sortedEntries.first?.sortedSets ?? []
+        XCTAssertEqual(sets.count, 2)
+        XCTAssertTrue(sets[0].isWarmup, "First set (warm-up) must be marked isWarmup")
+        XCTAssertFalse(sets[1].isWarmup, "Second set (working) must not be marked isWarmup")
     }
 
     // MARK: - Imperial unit conversion

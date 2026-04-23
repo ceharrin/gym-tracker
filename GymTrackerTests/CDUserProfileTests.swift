@@ -113,4 +113,46 @@ final class CDUserProfileTests: XCTestCase {
         try? context.save()
         XCTAssertNil(p.photoData)
     }
+
+    // MARK: - weightTrend
+
+    func test_weightTrend_noMeasurements_isNone() {
+        let p = makeProfile()
+        XCTAssertEqual(p.weightTrend, .none)
+    }
+
+    func test_weightTrend_oneMeasurement_isNone() {
+        let p = makeProfile()
+        addMeasurement(to: p, weightKg: 80)
+        XCTAssertEqual(p.weightTrend, .none)
+    }
+
+    func test_weightTrend_increasingWeight_isUp() {
+        let p = makeProfile()
+        addMeasurement(to: p, weightKg: 78, daysAgo: 7)
+        addMeasurement(to: p, weightKg: 80, daysAgo: 0)
+        XCTAssertEqual(p.weightTrend, .up)
+    }
+
+    func test_weightTrend_decreasingWeight_isDown() {
+        let p = makeProfile()
+        addMeasurement(to: p, weightKg: 82, daysAgo: 7)
+        addMeasurement(to: p, weightKg: 80, daysAgo: 0)
+        XCTAssertEqual(p.weightTrend, .down)
+    }
+
+    func test_weightTrend_equalWeight_isFlat() {
+        let p = makeProfile()
+        addMeasurement(to: p, weightKg: 80, daysAgo: 7)
+        addMeasurement(to: p, weightKg: 80, daysAgo: 0)
+        XCTAssertEqual(p.weightTrend, .flat)
+    }
+
+    func test_weightTrend_usesOnlyLastTwo_notFirst() {
+        let p = makeProfile()
+        addMeasurement(to: p, weightKg: 90, daysAgo: 30) // should be ignored
+        addMeasurement(to: p, weightKg: 83, daysAgo: 7)
+        addMeasurement(to: p, weightKg: 80, daysAgo: 0)
+        XCTAssertEqual(p.weightTrend, .down, "Trend must be computed from the last two measurements only")
+    }
 }

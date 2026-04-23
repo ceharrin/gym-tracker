@@ -1,6 +1,10 @@
 import Foundation
 import CoreData
 
+enum WeightTrend: Equatable {
+    case up, down, flat, none
+}
+
 extension CDUserProfile {
     var age: Int? {
         guard let birthDate else { return nil }
@@ -21,5 +25,14 @@ extension CDUserProfile {
 
     var latestWeight: CDBodyMeasurement? {
         sortedMeasurements.last
+    }
+
+    var weightTrend: WeightTrend {
+        let m = sortedMeasurements
+        guard m.count >= 2 else { return .none }
+        let diff = m[m.count - 1].weightKg - m[m.count - 2].weightKg
+        if diff > 0.01 { return .up }
+        if diff < -0.01 { return .down }
+        return .flat
     }
 }

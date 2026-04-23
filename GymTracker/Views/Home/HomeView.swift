@@ -86,7 +86,8 @@ struct HomeView: View {
                 value: latestWeightString,
                 label: "Current Weight",
                 icon: "scalemass.fill",
-                color: .blue
+                color: .blue,
+                trend: profile?.weightTrend
             )
         }
     }
@@ -141,15 +142,24 @@ struct StatCard: View {
     let label: String
     let icon: String
     let color: Color
+    var trend: WeightTrend? = nil
 
     var body: some View {
         VStack(spacing: 6) {
             Image(systemName: icon)
                 .font(.title3)
                 .foregroundStyle(color)
-            Text(value)
-                .font(.title3)
-                .fontWeight(.bold)
+            HStack(spacing: 3) {
+                Text(value)
+                    .font(.title3)
+                    .fontWeight(.bold)
+                if let trend, trend != .none {
+                    Image(systemName: trend == .up ? "arrow.up" : (trend == .down ? "arrow.down" : "minus"))
+                        .font(.caption2)
+                        .fontWeight(.bold)
+                        .foregroundStyle(trend == .up ? Color.red : (trend == .down ? Color.green : Color.secondary))
+                }
+            }
             Text(label)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
