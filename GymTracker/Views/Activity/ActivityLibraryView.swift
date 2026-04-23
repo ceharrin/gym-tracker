@@ -40,10 +40,15 @@ struct ActivityLibraryView: View {
                 List {
                     ForEach(grouped, id: \.0) { category, items in
                         Section {
-                            ForEach(items) { activity in
+                            let presets = items.filter(\.isPreset)
+                            let custom  = items.filter { !$0.isPreset }
+                            ForEach(presets) { activity in
                                 ActivityLibraryRow(activity: activity)
                             }
-                            .onDelete { deleteItems(from: items, offsets: $0) }
+                            ForEach(custom) { activity in
+                                ActivityLibraryRow(activity: activity)
+                            }
+                            .onDelete { deleteItems(from: custom, offsets: $0) }
                         } header: {
                             Label(category.displayName, systemImage: category.icon)
                                 .foregroundStyle(category.color)
@@ -95,7 +100,7 @@ struct ActivityLibraryView: View {
     private func deleteItems(from items: [CDActivity], offsets: IndexSet) {
         for idx in offsets {
             let activity = items[idx]
-            guard !activity.isPreset else { return }
+            guard !activity.isPreset else { continue }
             context.delete(activity)
         }
         try? context.save()

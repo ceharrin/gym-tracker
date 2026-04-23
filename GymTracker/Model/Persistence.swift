@@ -1,26 +1,16 @@
 import CoreData
-import CloudKit
 import Foundation
 
 struct PersistenceController {
     static let shared = PersistenceController()
 
-    let container: NSPersistentCloudKitContainer
+    let container: NSPersistentContainer
 
     init(inMemory: Bool = false) {
-        container = NSPersistentCloudKitContainer(name: "GymTracker")
+        container = NSPersistentContainer(name: "GymTracker")
 
         if inMemory {
             container.persistentStoreDescriptions.first?.url = URL(fileURLWithPath: "/dev/null")
-        } else {
-            guard let description = container.persistentStoreDescriptions.first else {
-                fatalError("No persistent store descriptions found")
-            }
-            // Disabled until the iCloud container is registered in the Developer Portal.
-            // Remove this line and add cloudKitContainerOptions to re-enable sync.
-            description.cloudKitContainerOptions = nil
-            description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
-            description.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
         }
 
         container.loadPersistentStores { _, error in

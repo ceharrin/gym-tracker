@@ -9,8 +9,6 @@ struct ProfileView: View {
         animation: .default
     ) private var profiles: FetchedResults<CDUserProfile>
 
-    @StateObject private var cloudSync = CloudSyncMonitor.shared
-
     @State private var showingEdit = false
     @State private var showingActivityLibrary = false
 
@@ -24,7 +22,6 @@ struct ProfileView: View {
                         ProfileDataView(profile: profile)
                     }
                     activityLibraryButton
-                    iCloudStatusRow
                 }
                 .padding(.horizontal)
                 .padding(.bottom, 20)
@@ -43,21 +40,6 @@ struct ProfileView: View {
                 ActivityLibraryView()
             }
         }
-    }
-
-    private var iCloudStatusRow: some View {
-        HStack(spacing: 12) {
-            Image(systemName: cloudSync.statusIcon)
-                .foregroundStyle(cloudSync.isSyncing ? Color.accentColor : .secondary)
-                .frame(width: 24)
-            Text(cloudSync.statusLabel)
-                .font(.subheadline)
-                .foregroundStyle(cloudSync.isSyncing ? .primary : .secondary)
-            Spacer()
-        }
-        .padding(16)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
     private var activityLibraryButton: some View {

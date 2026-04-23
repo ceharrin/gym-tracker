@@ -63,6 +63,7 @@ struct LogWorkoutView: View {
     @State private var startTime: Date = Date()
     @State private var confirmedPRs: [String] = []
     @State private var showingCelebration = false
+    @State private var saveError: String? = nil
 
     var body: some View {
         NavigationStack {
@@ -104,6 +105,14 @@ struct LogWorkoutView: View {
                     dismiss()
                 }
             }
+            .alert("Couldn't Save Workout", isPresented: Binding(
+                get: { saveError != nil },
+                set: { if !$0 { saveError = nil } }
+            )) {
+                Button("OK", role: .cancel) { saveError = nil }
+            } message: {
+                Text(saveError ?? "An unknown error occurred. Your workout was not saved.")
+            }
             .onAppear {
                 startTime = Date()
                 if let w = existingWorkout {
@@ -132,8 +141,9 @@ struct LogWorkoutView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
             HStack(spacing: 12) {
-                DatePicker("", selection: $workoutDate, displayedComponents: .date)
+                DatePicker("Workout date", selection: $workoutDate, displayedComponents: .date)
                     .labelsHidden()
+                    .accessibilityLabel("Workout date")
                     .padding(12)
                     .background(Color(.secondarySystemBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -286,7 +296,13 @@ struct LogWorkoutView: View {
             }
         }
 
-        try? context.save()
+        do {
+            try context.save()
+        } catch {
+            context.rollback()
+            saveError = error.localizedDescription
+            return
+        }
 
         if newPRNames.isEmpty {
             dismiss()
