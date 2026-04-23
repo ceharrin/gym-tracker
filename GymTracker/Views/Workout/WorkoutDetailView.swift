@@ -200,7 +200,7 @@ struct EntryDetailCard: View {
 
     private func deleteSet(_ set: CDEntrySet) {
         context.delete(set)
-        for (i, s) in entry.sortedSets.enumerated() {
+        for (i, s) in entry.sortedSets.filter({ !$0.isDeleted }).enumerated() {
             s.setNumber = Int16(i + 1)
         }
         try? context.save()

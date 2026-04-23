@@ -48,7 +48,7 @@ final class SetDeletionTests: XCTestCase {
     // Mirrors the logic in EntryDetailCard.deleteSet(_:)
     private func deleteSet(_ set: CDEntrySet, from entry: CDWorkoutEntry) {
         context.delete(set)
-        for (i, s) in entry.sortedSets.enumerated() {
+        for (i, s) in entry.sortedSets.filter({ !$0.isDeleted }).enumerated() {
             s.setNumber = Int16(i + 1)
         }
         try? context.save()
