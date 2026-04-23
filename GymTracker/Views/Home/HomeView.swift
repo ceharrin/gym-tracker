@@ -149,17 +149,17 @@ struct StatCard: View {
             Image(systemName: icon)
                 .font(.title3)
                 .foregroundStyle(color)
-            HStack(spacing: 3) {
-                Text(value)
-                    .font(.title3)
-                    .fontWeight(.bold)
-                if let trend, trend != .none {
-                    Image(systemName: trend == .up ? "arrow.up" : (trend == .down ? "arrow.down" : "minus"))
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .foregroundStyle(trend == .up ? Color.red : (trend == .down ? Color.green : Color.secondary))
+            Text(value)
+                .font(.title3)
+                .fontWeight(.bold)
+                .overlay(alignment: .topTrailing) {
+                    if let trend, trend != .none {
+                        Image(systemName: trend == .up ? "arrow.up" : (trend == .down ? "arrow.down" : "minus"))
+                            .font(.system(size: 8, weight: .bold))
+                            .foregroundStyle(trend == .up ? Color.red : (trend == .down ? Color.green : Color.secondary))
+                            .offset(x: 10, y: -2)
+                    }
                 }
-            }
             Text(label)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
