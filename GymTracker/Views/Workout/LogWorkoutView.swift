@@ -58,7 +58,6 @@ struct LogWorkoutView: View {
     @State private var durationMinutes: String = ""
     @State private var workoutDate: Date = Date()
     @State private var showingPicker = false
-    @State private var showingFinish = false
     @State private var startTime: Date = Date()
     @State private var confirmedPRs: [String] = []
     @State private var showingCelebration = false
@@ -66,31 +65,86 @@ struct LogWorkoutView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    VStack(spacing: 16) {
-                        metaSection
-                        entriesList
-                        addExerciseButton
-                        if !entries.isEmpty {
-                            finishSection
-                                .id("finishSection")
-                        }
-                    }
-                    .padding()
+            List {
+                // Workout metadata
+                Section {
+                    metaSection
+                        .listRowInsets(EdgeInsets())
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
                 }
-                .onChange(of: entries.count) { _, count in
-                    guard count > 0 else { return }
-                    withAnimation {
-                        proxy.scrollTo("finishSection", anchor: .bottom)
+                .listRowBackground(Color.clear)
+
+                // One section per activity
+                ForEach($entries) { $entry in
+                    EntrySection(entry: $entry, onDeleteEntry: {
+                        entries.removeAll { $0.id == $entry.wrappedValue.id }
+                    })
+                }
+
+                // Add Exercise
+                Section {
+                    Button {
+                        showingPicker = true
+                    } label: {
+                        Label("Add Exercise / Activity", systemImage: "plus.circle.fill")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(14)
+                            .background(Color.accentColor)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
+                    }
+                    .buttonStyle(.plain)
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+                }
+
+                // Energy + Notes (only once there are entries)
+                if !entries.isEmpty {
+                    Section {
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("Energy Level: \(energyLevel)/10")
+                                .font(.subheadline)
+                                .fontWeight(.medium)
+                            Slider(value: Binding(
+                                get: { Double(energyLevel) },
+                                set: { energyLevel = Int($0) }
+                            ), in: 1...10, step: 1)
+                            .tint(.orange)
+                        }
+                        .listRowBackground(Color(.secondarySystemBackground))
+
+                        TextField("Workout notes (optional)", text: $notes, axis: .vertical)
+                            .lineLimit(2...4)
+                            .listRowBackground(Color(.secondarySystemBackground))
                     }
                 }
             }
+            .listStyle(.insetGrouped)
             .navigationTitle(isDuplicate ? "Duplicate Workout" : (existingWorkout == nil ? "Log Workout" : "Edit Workout"))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
+                }
+            }
+            .safeAreaInset(edge: .bottom) {
+                if !entries.isEmpty {
+                    Button(action: save) {
+                        Text("Complete Workout")
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(16)
+                            .background(Color.accentColor)
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                    }
+                    .padding(.horizontal)
+                    .padding(.vertical, 12)
+                    .background(.regularMaterial)
                 }
             }
             .sheet(isPresented: $showingPicker) {
@@ -129,7 +183,7 @@ struct LogWorkoutView: View {
         }
     }
 
-    // MARK: Sections
+    // MARK: Meta section
 
     private var metaSection: some View {
         VStack(spacing: 12) {
@@ -162,64 +216,7 @@ struct LogWorkoutView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
         }
-    }
-
-    private var entriesList: some View {
-        ForEach($entries) { $entry in
-            LiveEntryCard(entry: $entry, onDelete: {
-                entries.removeAll { $0.id == entry.id }
-            })
-        }
-    }
-
-    private var addExerciseButton: some View {
-        Button {
-            showingPicker = true
-        } label: {
-            Label("Add Exercise / Activity", systemImage: "plus")
-                .font(.subheadline)
-                .fontWeight(.medium)
-                .frame(maxWidth: .infinity)
-                .padding(14)
-                .background(Color(.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-        }
-        .buttonStyle(.plain)
-    }
-
-    private var finishSection: some View {
-        VStack(spacing: 12) {
-            Divider()
-
-            VStack(alignment: .leading, spacing: 8) {
-                Text("Energy Level: \(energyLevel)/10")
-                    .font(.subheadline)
-                    .fontWeight(.medium)
-                Slider(value: Binding(
-                    get: { Double(energyLevel) },
-                    set: { energyLevel = Int($0) }
-                ), in: 1...10, step: 1)
-                .tint(.orange)
-            }
-
-            TextField("Workout notes (optional)", text: $notes, axis: .vertical)
-                .lineLimit(2...4)
-                .padding(12)
-                .background(Color(.secondarySystemBackground))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-
-            Button {
-                save()
-            } label: {
-                Text("Finish Workout")
-                    .font(.headline)
-                    .frame(maxWidth: .infinity)
-                    .padding(16)
-                    .background(Color.accentColor)
-                    .foregroundStyle(.white)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
-            }
-        }
+        .padding(.bottom, 4)
     }
 
     // MARK: Load (edit mode)
@@ -254,7 +251,6 @@ struct LogWorkoutView: View {
     // MARK: Save
 
     private func save() {
-        // Detect PRs before any Core Data mutations (history must be intact).
         let newPRNames = detectPRs()
 
         let workout: CDWorkout
@@ -315,8 +311,6 @@ struct LogWorkoutView: View {
         }
     }
 
-    /// Check each PR-attempt set against historical records.
-    /// Returns the names of activities where a genuine new record was set.
     private func detectPRs() -> [String] {
         var names: [String] = []
         for liveEntry in entries {
@@ -332,7 +326,6 @@ struct LogWorkoutView: View {
         return names
     }
 
-    /// Fetch all historical CDEntrySets for an activity, optionally excluding a specific workout.
     private func historicalSets(for activity: CDActivity, excludingWorkout: CDWorkout? = nil) -> [CDEntrySet] {
         let request = CDWorkoutEntry.fetchRequest()
         request.predicate = NSPredicate(format: "activity == %@", activity)
@@ -349,60 +342,70 @@ struct LogWorkoutView: View {
     }
 }
 
-// MARK: - Live Entry Card
+// MARK: - Entry Section
 
-struct LiveEntryCard: View {
+struct EntrySection: View {
     @Binding var entry: LiveEntry
-    let onDelete: () -> Void
+    let onDeleteEntry: () -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            entryHeader
-            Divider()
-            setHeader
-            List {
-                ForEach(entry.sets.indices, id: \.self) { idx in
-                    LiveSetRow(
-                        set: $entry.sets[idx],
-                        metric: entry.activity.metric,
-                        setNumber: idx + 1
-                    )
-                    .listRowBackground(Color.clear)
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 2, leading: 0, bottom: 2, trailing: 0))
-                }
-                .onDelete { indices in
-                    guard entry.sets.count > indices.count else { return }
-                    entry.sets.remove(atOffsets: indices)
-                }
+        Section {
+            setColumnHeader
+                .deleteDisabled(true)
+                .listRowBackground(Color(.secondarySystemBackground))
+
+            ForEach(Array(entry.sets.enumerated()), id: \.element.id) { idx, _ in
+                LiveSetRow(
+                    set: $entry.sets[idx],
+                    metric: entry.activity.metric,
+                    setNumber: idx + 1
+                )
+                .listRowBackground(Color(.secondarySystemBackground))
             }
-            .listStyle(.plain)
-            .scrollDisabled(true)
-            .scrollContentBackground(.hidden)
-            .background(Color.clear)
-            .frame(height: CGFloat(entry.sets.count) * 50)
-            addSetButton
+            .onDelete { indices in
+                guard entry.sets.count > indices.count else { return }
+                entry.sets.remove(atOffsets: indices)
+            }
+
+            Button {
+                let newSet = entry.sets.last.map { LiveSet.copying($0) } ?? LiveSet()
+                entry.sets.append(newSet)
+            } label: {
+                Label("Add Set", systemImage: "plus")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(Color.accentColor)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                    .background(Color.accentColor.opacity(0.1))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+            .buttonStyle(.plain)
+            .deleteDisabled(true)
+            .listRowBackground(Color(.secondarySystemBackground))
+        } header: {
+            HStack {
+                Image(systemName: entry.activity.activityCategory.icon)
+                    .foregroundStyle(entry.activity.activityCategory.color)
+                Text(entry.activity.name)
+                    .font(.headline)
+                    .fontWeight(.semibold)
+                    .textCase(nil)
+                    .foregroundStyle(.primary)
+                Spacer()
+                Button(role: .destructive, action: onDeleteEntry) {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                        .font(.body)
+                }
+                .buttonStyle(.plain)
+            }
+            .padding(.vertical, 4)
         }
-        .padding(16)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
-    private var entryHeader: some View {
-        HStack {
-            Image(systemName: entry.activity.activityCategory.icon)
-                .foregroundStyle(entry.activity.activityCategory.color)
-            Text(entry.activity.name)
-                .font(.headline)
-            Spacer()
-            Button(role: .destructive, action: onDelete) {
-                Image(systemName: "xmark.circle.fill")
-                    .foregroundStyle(.secondary)
-            }
-        }
-    }
-
-    private var setHeader: some View {
+    @ViewBuilder
+    private var setColumnHeader: some View {
         HStack {
             Text("Set")
                 .frame(width: 36, alignment: .leading)
@@ -430,24 +433,6 @@ struct LiveEntryCard: View {
         .foregroundStyle(.secondary)
         .fontWeight(.medium)
     }
-
-    private var addSetButton: some View {
-        Button {
-            let newSet = entry.sets.last.map { LiveSet.copying($0) } ?? LiveSet()
-            entry.sets.append(newSet)
-        } label: {
-            Label("Add Set", systemImage: "plus")
-                .font(.caption)
-                .fontWeight(.medium)
-                .foregroundStyle(Color.accentColor)
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-                .background(Color.accentColor.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-        }
-        .buttonStyle(.plain)
-    }
-
 }
 
 // MARK: - Live Set Row
@@ -491,7 +476,6 @@ struct LiveSetRow: View {
                 inputField($set.customLabel, placeholder: "unit", keyboard: .default)
             }
 
-            // PR attempt toggle
             Button {
                 set.isPRAttempt.toggle()
             } label: {
@@ -502,7 +486,6 @@ struct LiveSetRow: View {
                     .contentTransition(.symbolEffect(.replace))
             }
             .buttonStyle(.plain)
-
         }
     }
 
