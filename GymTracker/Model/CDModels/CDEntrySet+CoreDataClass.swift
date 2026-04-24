@@ -17,7 +17,6 @@ public class CDEntrySet: NSManagedObject {
     @NSManaged public var setNumber: Int16
     @NSManaged public var weightKg: Double
     @NSManaged public var isPRAttempt: Bool
-    @NSManaged public var isWarmup: Bool
     @NSManaged public var entry: CDWorkoutEntry?
 }
 extension CDEntrySet: Identifiable {}
