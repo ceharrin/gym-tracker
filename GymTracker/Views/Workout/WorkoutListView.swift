@@ -54,18 +54,11 @@ struct WorkoutListView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 16) {
-                        if !workouts.isEmpty {
-                            Button {
-                                showingPrintSummary = true
-                            } label: {
-                                Image(systemName: "printer")
-                            }
-                        }
+                    if !workouts.isEmpty {
                         Button {
-                            showingLogWorkout = true
+                            showingPrintSummary = true
                         } label: {
-                            Image(systemName: "plus")
+                            Image(systemName: "printer")
                         }
                     }
                 }
@@ -83,7 +76,7 @@ struct WorkoutListView: View {
         ContentUnavailableView {
             Label("No Workouts Yet", systemImage: "dumbbell")
         } description: {
-            Text("Tap + to log your first workout.")
+            Text("Log your first workout to see it here.")
         } actions: {
             Button("Start Workout") { showingLogWorkout = true }
                 .buttonStyle(.borderedProminent)

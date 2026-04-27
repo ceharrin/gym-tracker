@@ -11,6 +11,7 @@ struct WorkoutDetailView: View {
     @State private var isDeleting = false
     @State private var shareURL: URL? = nil
     @State private var showingShareSheet = false
+    @State private var shareError: String? = nil
 
     var body: some View {
         Group {
@@ -39,10 +40,11 @@ struct WorkoutDetailView: View {
                     Button("Edit") { showingEdit = true }
                     Button("Duplicate") { showingDuplicate = true }
                     Button {
-                        let html = WorkoutHTMLFormatter.singleWorkoutHTML(workout: workout)
-                        if let url = PrintCoordinator.htmlToPDF(html, filename: "GymTracker-Workout.pdf") {
-                            shareURL = url
+                        do {
+                            shareURL = try WorkoutExporter.exportHTML(for: workout)
                             showingShareSheet = true
+                        } catch {
+                            shareError = error.localizedDescription
                         }
                     } label: {
                         Label("Share", systemImage: "square.and.arrow.up")
@@ -79,6 +81,14 @@ struct WorkoutDetailView: View {
             if let url = shareURL {
                 ShareSheet(items: [url])
             }
+        }
+        .alert("Couldn't Export Workout", isPresented: Binding(
+            get: { shareError != nil },
+            set: { if !$0 { shareError = nil } }
+        )) {
+            Button("OK", role: .cancel) { shareError = nil }
+        } message: {
+            Text(shareError ?? "An unknown error occurred.")
         }
     }
 
