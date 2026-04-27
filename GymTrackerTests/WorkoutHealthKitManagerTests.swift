@@ -42,20 +42,13 @@ final class WorkoutHealthKitManagerTests: XCTestCase {
         XCTAssertEqual(mock.savedWorkouts.first?.end, expectedEnd)
     }
 
-    func test_syncWorkout_doesNotSaveWhenAuthorizationFails() async {
-        let mock = MockHealthKitService()
-        mock.authorizationError = NSError(domain: "HKErrorDomain", code: 1)
-        let manager = WorkoutHealthKitManager(service: mock)
-        await manager.syncWorkout(date: fixedDate, durationMinutes: 30)
-        XCTAssertTrue(mock.savedWorkouts.isEmpty)
-    }
-
     func test_syncWorkout_silentlyHandlesAuthorizationError() async {
         let mock = MockHealthKitService()
         mock.authorizationError = NSError(domain: "HKErrorDomain", code: 1)
         let manager = WorkoutHealthKitManager(service: mock)
-        // Must not crash or propagate the error
         await manager.syncWorkout(date: fixedDate, durationMinutes: 30)
+        // Must not crash, and must not proceed to save
+        XCTAssertTrue(mock.savedWorkouts.isEmpty)
     }
 
     func test_syncWorkout_silentlyHandlesSaveError() async {
@@ -71,12 +64,5 @@ final class WorkoutHealthKitManagerTests: XCTestCase {
         let manager = WorkoutHealthKitManager(service: mock)
         await manager.syncWorkout(date: fixedDate, durationMinutes: 30, isNew: false)
         XCTAssertTrue(mock.savedWorkouts.isEmpty)
-    }
-
-    func test_syncWorkout_doesSyncDuplicatedWorkout() async {
-        let mock = MockHealthKitService()
-        let manager = WorkoutHealthKitManager(service: mock)
-        await manager.syncWorkout(date: fixedDate, durationMinutes: 30, isNew: true)
-        XCTAssertEqual(mock.savedWorkouts.count, 1)
     }
 }

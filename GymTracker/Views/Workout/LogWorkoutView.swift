@@ -1,6 +1,5 @@
 import SwiftUI
 import CoreData
-import HealthKit
 
 // MARK: - In-memory models for live session
 
