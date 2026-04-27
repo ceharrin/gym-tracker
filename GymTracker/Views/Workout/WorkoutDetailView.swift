@@ -9,6 +9,8 @@ struct WorkoutDetailView: View {
     @State private var showingDuplicate = false
     @State private var showingDeleteAlert = false
     @State private var isDeleting = false
+    @State private var shareURL: URL? = nil
+    @State private var showingShareSheet = false
 
     var body: some View {
         Group {
@@ -38,9 +40,12 @@ struct WorkoutDetailView: View {
                     Button("Duplicate") { showingDuplicate = true }
                     Button {
                         let html = WorkoutHTMLFormatter.singleWorkoutHTML(workout: workout)
-                        PrintCoordinator.printHTML(html, jobName: workout.title)
+                        if let url = PrintCoordinator.htmlToPDF(html, filename: "GymTracker-Workout.pdf") {
+                            shareURL = url
+                            showingShareSheet = true
+                        }
                     } label: {
-                        Label("Print", systemImage: "printer")
+                        Label("Share", systemImage: "square.and.arrow.up")
                     }
                     Divider()
                     Button(role: .destructive) {
@@ -69,6 +74,11 @@ struct WorkoutDetailView: View {
         }
         .sheet(isPresented: $showingDuplicate) {
             LogWorkoutView(workout: workout, isDuplicate: true)
+        }
+        .sheet(isPresented: $showingShareSheet) {
+            if let url = shareURL {
+                ShareSheet(items: [url])
+            }
         }
     }
 

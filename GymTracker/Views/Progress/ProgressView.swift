@@ -15,33 +15,14 @@ struct ProgressView: View {
         animation: .default
     ) private var profiles: FetchedResults<CDUserProfile>
 
-    @State private var selectedActivity: CDActivity? = nil
-    @State private var selectedRange: DateRange = .threeMonths
-
-    enum DateRange: String, CaseIterable {
-        case oneMonth   = "1M"
-        case threeMonths = "3M"
-        case sixMonths  = "6M"
-        case oneYear    = "1Y"
-        case allTime    = "All"
-
-        var days: Int? {
-            switch self {
-            case .oneMonth: return 30
-            case .threeMonths: return 90
-            case .sixMonths: return 180
-            case .oneYear: return 365
-            case .allTime: return nil
-            }
-        }
-    }
+    @State private var selectedActivities: Set<CDActivity> = []
+    @State private var selectedRange: ProgressDateRange = .threeMonths
+    @State private var exportURL: URL? = nil
+    @State private var showingShareSheet = false
+    @State private var isExporting = false
 
     private var profile: CDUserProfile? { profiles.first }
-
-    private var cutoffDate: Date? {
-        guard let days = selectedRange.days else { return nil }
-        return Calendar.current.date(byAdding: .day, value: -days, to: Date())
-    }
+    private var cutoffDate: Date? { selectedRange.cutoffDate }
 
     var body: some View {
         NavigationStack {
@@ -50,17 +31,47 @@ struct ProgressView: View {
                     rangeSelector
                     bodyWeightChart
                     activityPicker
-                    if let activity = selectedActivity {
-                        activityChart(for: activity)
-                        personalRecordCard(for: activity)
-                    } else {
+                    if selectedActivities.isEmpty {
                         activityPlaceholder
+                    } else {
+                        ForEach(selectedActivities.sorted { $0.name < $1.name }) { activity in
+                            activityChart(for: activity)
+                            personalRecordCard(for: activity)
+                        }
                     }
                 }
                 .padding()
             }
             .navigationTitle("Progress")
             .navigationBarTitleDisplayMode(.large)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        Task { @MainActor in
+                            isExporting = true
+                            // Yield so SwiftUI can render the spinner before the blocking render
+                            await Task.yield()
+                            defer { isExporting = false }
+                            let toExport = selectedActivities.sorted { $0.name < $1.name }
+                            guard let url = ProgressExporter.generatePDF(for: toExport, range: selectedRange) else { return }
+                            exportURL = url
+                            showingShareSheet = true
+                        }
+                    } label: {
+                        if isExporting {
+                            ProgressView().scaleEffect(0.8)
+                        } else {
+                            Image(systemName: "square.and.arrow.up")
+                        }
+                    }
+                    .disabled(selectedActivities.isEmpty || isExporting)
+                }
+            }
+            .sheet(isPresented: $showingShareSheet) {
+                if let url = exportURL {
+                    ShareSheet(items: [url])
+                }
+            }
         }
     }
 
@@ -68,7 +79,7 @@ struct ProgressView: View {
 
     private var rangeSelector: some View {
         Picker("Range", selection: $selectedRange) {
-            ForEach(DateRange.allCases, id: \.self) { range in
+            ForEach(ProgressDateRange.allCases, id: \.self) { range in
                 Text(range.rawValue).tag(range)
             }
         }
@@ -84,7 +95,16 @@ struct ProgressView: View {
 
             let measurements = filteredMeasurements
             if measurements.isEmpty {
-                emptyChartPlaceholder(message: "Log weight in your Profile to see trends here.")
+                // Render an empty Chart so the Charts framework is always initialised
+                // in the view hierarchy — required for ImageRenderer to work correctly
+                // when exporting progress before any activity chart has been shown.
+                Chart([] as [Double], id: \.self) { _ in }
+                    .frame(height: 80)
+                    .chartXAxis(.hidden)
+                    .chartYAxis(.hidden)
+                    .overlay {
+                        emptyChartPlaceholder(message: "Log weight in your Profile to see trends here.")
+                    }
             } else {
                 Chart {
                     ForEach(measurements) { m in
@@ -145,7 +165,11 @@ struct ProgressView: View {
                 HStack(spacing: 8) {
                     ForEach(activitiesWithData) { activity in
                         Button {
-                            selectedActivity = selectedActivity?.id == activity.id ? nil : activity
+                            if selectedActivities.contains(activity) {
+                                selectedActivities.remove(activity)
+                            } else {
+                                selectedActivities.insert(activity)
+                            }
                         } label: {
                             HStack(spacing: 6) {
                                 Image(systemName: activity.activityCategory.icon)
@@ -156,10 +180,10 @@ struct ProgressView: View {
                             }
                             .padding(.horizontal, 12)
                             .padding(.vertical, 7)
-                            .background(selectedActivity?.id == activity.id
+                            .background(selectedActivities.contains(activity)
                                 ? activity.activityCategory.color
                                 : Color(.secondarySystemBackground))
-                            .foregroundStyle(selectedActivity?.id == activity.id ? .white : .primary)
+                            .foregroundStyle(selectedActivities.contains(activity) ? .white : .primary)
                             .clipShape(Capsule())
                         }
                         .buttonStyle(.plain)
@@ -179,7 +203,7 @@ struct ProgressView: View {
             Image(systemName: "chart.line.uptrend.xyaxis")
                 .font(.largeTitle)
                 .foregroundStyle(.secondary)
-            Text("Select an activity above to see your progress chart.")
+            Text("Select one or more activities above to see your progress chart.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

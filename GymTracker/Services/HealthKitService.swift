@@ -18,7 +18,12 @@ final class LiveHealthKitService: HealthKitServiceProtocol {
     }
 
     func saveStrengthWorkout(start: Date, end: Date) async throws {
-        let workout = HKWorkout(activityType: .traditionalStrengthTraining, start: start, end: end)
-        try await store.save(workout)
+        let config = HKWorkoutConfiguration()
+        config.activityType = .traditionalStrengthTraining
+
+        let builder = HKWorkoutBuilder(healthStore: store, configuration: config, device: .local())
+        try await builder.beginCollection(at: start)
+        try await builder.endCollection(at: end)
+        try await builder.finishWorkout()
     }
 }

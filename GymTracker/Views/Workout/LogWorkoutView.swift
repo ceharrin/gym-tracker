@@ -82,26 +82,6 @@ struct LogWorkoutView: View {
                     })
                 }
 
-                // Add Exercise
-                Section {
-                    Button {
-                        showingPicker = true
-                    } label: {
-                        Label("Add Exercise / Activity", systemImage: "plus.circle.fill")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(14)
-                            .background(Color.accentColor)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                    }
-                    .buttonStyle(.plain)
-                    .listRowInsets(EdgeInsets())
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-                }
-
                 // Energy + Notes (only once there are entries)
                 if !entries.isEmpty {
                     Section {
@@ -132,20 +112,36 @@ struct LogWorkoutView: View {
                 }
             }
             .safeAreaInset(edge: .bottom) {
-                if !entries.isEmpty {
-                    Button(action: save) {
-                        Text("Complete Workout")
-                            .font(.headline)
-                            .frame(maxWidth: .infinity)
-                            .padding(16)
-                            .background(Color.accentColor)
+                VStack(spacing: 8) {
+                    Button {
+                        showingPicker = true
+                    } label: {
+                        Label("Add Exercise / Activity", systemImage: "plus.circle.fill")
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
                             .foregroundStyle(.white)
-                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                            .frame(maxWidth: .infinity)
+                            .padding(14)
+                            .background(Color.accentColor)
+                            .clipShape(RoundedRectangle(cornerRadius: 14))
                     }
-                    .padding(.horizontal)
-                    .padding(.vertical, 12)
-                    .background(.regularMaterial)
+                    .buttonStyle(.plain)
+
+                    if !entries.isEmpty {
+                        Button(action: save) {
+                            Text("Complete Workout")
+                                .font(.headline)
+                                .frame(maxWidth: .infinity)
+                                .padding(16)
+                                .background(Color.accentColor)
+                                .foregroundStyle(.white)
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                        }
+                    }
                 }
+                .padding(.horizontal)
+                .padding(.vertical, 12)
+                .background(.regularMaterial)
             }
             .sheet(isPresented: $showingPicker) {
                 ExercisePickerView { activity in
