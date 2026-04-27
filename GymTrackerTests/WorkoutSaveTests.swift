@@ -40,7 +40,8 @@ final class WorkoutSaveTests: XCTestCase {
         laps: String = "",
         customValue: String = "",
         customLabel: String = "",
-        notes: String = ""
+        notes: String = "",
+        isWarmup: Bool = false
     ) -> LiveSet {
         var s = LiveSet()
         s.weightKg = weightKg
@@ -52,6 +53,7 @@ final class WorkoutSaveTests: XCTestCase {
         s.customValue = customValue
         s.customLabel = customLabel
         s.notes = notes
+        s.isWarmup = isWarmup
         return s
     }
 
@@ -253,6 +255,12 @@ final class WorkoutSaveTests: XCTestCase {
         XCTAssertNil(w.sortedEntries.first?.sortedSets.first?.notes)
     }
 
+    func test_save_set_storesWarmupFlag() throws {
+        let a = makeActivity()
+        let w = try saveNew(entries: [(a, [liveSet(weightKg: "40", reps: "12", isWarmup: true)], "")])
+        XCTAssertEqual(w.sortedEntries.first?.sortedSets.first?.isWarmup, true)
+    }
+
     // MARK: - Edit existing workout
 
     func test_edit_replacesOldEntriesWithNew() throws {
@@ -384,6 +392,46 @@ final class WorkoutSaveTests: XCTestCase {
         let refetched = fetched.first(where: { $0.id == wid })
         XCTAssertEqual(refetched?.title, "Updated")
         XCTAssertEqual(refetched?.sortedEntries.first?.sortedSets.first?.weightKg ?? 0, 60, accuracy: 0.01)
+    }
+
+    func test_edit_loadAndSaveRoundTrip_preservesWarmupFlag() throws {
+        let a = makeActivity()
+        let w = try saveNew(entries: [(a, [liveSet(weightKg: "30", reps: "15", isWarmup: true)], "")])
+
+        let loaded = WorkoutEditor.load(from: w)
+        XCTAssertEqual(loaded.entries.first?.sets.first?.isWarmup, true)
+
+        _ = try WorkoutEditor.save(
+            data: loaded,
+            context: context,
+            existingWorkout: w,
+            isDuplicate: false,
+            startTime: loaded.date
+        )
+
+        context.refreshAllObjects()
+        let fetched = try context.fetch(CDWorkout.fetchRequest())
+        let refetched = try XCTUnwrap(fetched.first(where: { $0.id == w.id }))
+        XCTAssertEqual(refetched.sortedEntries.first?.sortedSets.first?.isWarmup, true)
+    }
+
+    func test_duplicate_loadAndSaveRoundTrip_preservesWarmupFlag() throws {
+        let a = makeActivity()
+        let original = try saveNew(entries: [(a, [liveSet(weightKg: "30", reps: "15", isWarmup: true)], "")])
+
+        let loaded = WorkoutEditor.load(from: original)
+        XCTAssertEqual(loaded.entries.first?.sets.first?.isWarmup, true)
+
+        let duplicate = try WorkoutEditor.save(
+            data: loaded,
+            context: context,
+            existingWorkout: original,
+            isDuplicate: true,
+            startTime: loaded.date
+        ).savedWorkout
+
+        XCTAssertEqual(duplicate.sortedEntries.first?.sortedSets.first?.isWarmup, true)
+        XCTAssertEqual(original.sortedEntries.first?.sortedSets.first?.isWarmup, true)
     }
 
     // MARK: - Rollback on failure

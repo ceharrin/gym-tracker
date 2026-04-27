@@ -14,6 +14,7 @@ struct LiveSet: Identifiable {
     var customValue: String = ""
     var customLabel: String = ""
     var notes: String = ""
+    var isWarmup: Bool = false
     var isPRAttempt: Bool = false
 
     static func copying(_ other: LiveSet) -> LiveSet {
@@ -26,6 +27,7 @@ struct LiveSet: Identifiable {
         s.laps = other.laps
         s.customValue = other.customValue
         s.customLabel = other.customLabel
+        s.isWarmup = other.isWarmup
         return s
     }
 }
@@ -75,6 +77,7 @@ enum WorkoutEditor {
                 s.customValue = set.customValue > 0 ? String(format: "%.1f", set.customValue) : ""
                 s.customLabel = set.customLabel ?? ""
                 s.notes       = set.notes ?? ""
+                s.isWarmup    = set.isWarmup
                 return s
             }
             return mapped.isEmpty ? [LiveSet()] : mapped
@@ -152,6 +155,7 @@ enum WorkoutEditor {
                 set.laps = Int32(liveSet.laps) ?? 0
                 set.customValue = Double(liveSet.customValue) ?? 0
                 set.customLabel = liveSet.customLabel.isEmpty ? nil : liveSet.customLabel
+                set.isWarmup = liveSet.isWarmup
                 set.notes = liveSet.notes.isEmpty ? nil : liveSet.notes
                 set.entry = entry
             }
