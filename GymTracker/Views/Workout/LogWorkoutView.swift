@@ -128,7 +128,6 @@ struct LogWorkoutView: View {
             }
             .onAppear {
                 startTime = Date()
-                Task { await WorkoutHealthKitManager.shared.requestAuthorization() }
                 if let w = existingWorkout {
                     loadWorkout(w)
                     if isDuplicate {
@@ -220,11 +219,7 @@ struct LogWorkoutView: View {
 
         let isNew = existingWorkout == nil || isDuplicate
         Task {
-            await WorkoutHealthKitManager.shared.syncWorkout(
-                date: result.savedWorkout.date,
-                durationMinutes: Int(result.savedWorkout.durationMinutes),
-                isNew: isNew
-            )
+            await WorkoutHealthKitManager.shared.syncWorkout(result.savedWorkout, isNew: isNew)
         }
 
         if result.newPRNames.isEmpty {

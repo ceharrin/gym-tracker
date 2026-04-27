@@ -31,6 +31,8 @@
 	<string>LaunchScreen</string>
 	<key>NSHealthUpdateUsageDescription</key>
 	<string>GymTracker saves your strength workouts to Apple Health to keep your activity history in sync.</string>
+	<key>NSHealthShareUsageDescription</key>
+	<string>GymTracker reads workouts, body weight, and heart rate to enrich your progress and workout insights.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

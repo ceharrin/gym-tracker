@@ -13,6 +13,8 @@ struct WorkoutDetailView: View {
     @State private var showingShareSheet = false
     @State private var shareError: String? = nil
     @State private var isExportingShare = false
+    @State private var isRetryingHealthSync = false
+    @State private var heartRateSummary: WorkoutHeartRateSummary? = nil
 
     var body: some View {
         Group {
@@ -59,6 +61,18 @@ struct WorkoutDetailView: View {
                         Label("Share", systemImage: "square.and.arrow.up")
                     }
                     .disabled(isExportingShare)
+                    if workout.healthKitCanRetrySync {
+                        Button {
+                            Task { @MainActor in
+                                guard !isRetryingHealthSync else { return }
+                                isRetryingHealthSync = true
+                                defer { isRetryingHealthSync = false }
+                                await WorkoutHealthKitManager.shared.retryWorkoutSync(workout)
+                            }
+                        } label: {
+                            Label("Retry Apple Health Sync", systemImage: "arrow.clockwise")
+                        }
+                    }
                     Divider()
                     Button(role: .destructive) {
                         showingDeleteAlert = true
@@ -102,15 +116,38 @@ struct WorkoutDetailView: View {
         } message: {
             Text(shareError ?? "An unknown error occurred.")
         }
+        .task(id: workout.objectID) {
+            heartRateSummary = await WorkoutHealthKitManager.shared.loadHeartRateSummary(for: workout)
+        }
     }
 
     private var metaCard: some View {
-        HStack(spacing: 0) {
-            metaStat(label: "Date", value: workout.date, style: .date)
-            Divider().frame(height: 40)
-            metaDurationStat
-            Divider().frame(height: 40)
-            metaEnergyStat
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(spacing: 0) {
+                metaStat(label: "Date", value: workout.date, style: .date)
+                Divider().frame(height: 40)
+                metaDurationStat
+                Divider().frame(height: 40)
+                metaEnergyStat
+            }
+
+            Label {
+                Text(workout.healthKitSyncState.displayText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } icon: {
+                Image(systemName: workout.healthKitSyncState.symbolName)
+                    .foregroundStyle(workout.healthKitSyncState.tint)
+            }
+
+            if let heartRateSummary {
+                HStack(spacing: 16) {
+                    Label("\(heartRateSummary.averageBPM) avg", systemImage: "heart.fill")
+                    Label("\(heartRateSummary.maxBPM) max", systemImage: "bolt.heart.fill")
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
         }
         .frame(maxWidth: .infinity)
         .padding(16)
