@@ -29,6 +29,8 @@
 	</dict>
 	<key>UILaunchScreen</key>
 	<dict/>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>GymTracker saves your strength workouts to Apple Health to keep your activity history in sync.</string>
 	<key>UIBackgroundModes</key>
 	<array>
 		<string>remote-notification</string>

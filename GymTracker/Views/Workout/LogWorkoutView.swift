@@ -1,5 +1,6 @@
 import SwiftUI
 import CoreData
+import HealthKit
 
 // MARK: - In-memory models for live session
 
@@ -168,6 +169,7 @@ struct LogWorkoutView: View {
             }
             .onAppear {
                 startTime = Date()
+                Task { await WorkoutHealthKitManager.shared.requestAuthorization() }
                 if let w = existingWorkout {
                     loadWorkout(w)
                     if isDuplicate {
@@ -301,6 +303,17 @@ struct LogWorkoutView: View {
             context.rollback()
             saveError = error.localizedDescription
             return
+        }
+
+        let isNew = existingWorkout == nil || isDuplicate
+        let savedDate = workout.date
+        let savedDuration = Int(workout.durationMinutes)
+        Task {
+            await WorkoutHealthKitManager.shared.syncWorkout(
+                date: savedDate,
+                durationMinutes: savedDuration,
+                isNew: isNew
+            )
         }
 
         if newPRNames.isEmpty {
