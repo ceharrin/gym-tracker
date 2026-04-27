@@ -39,7 +39,7 @@
         <attribute name="goals" optional="YES" attributeType="String"/>
         <attribute name="heightCm" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <attribute name="name" attributeType="String" defaultValueString=""/>
-        <attribute name="photoData" optional="YES" attributeType="Binary" allowsExternalBinaryDataStorage="YES"/>
+        <attribute name="photoData" optional="YES" attributeType="Binary"/>
         <relationship name="measurements" optional="YES" toMany="YES" deletionRule="Cascade" destinationEntity="CDBodyMeasurement" inverseName="profile" inverseEntity="CDBodyMeasurement"/>
     </entity>
     <entity name="CDWorkout" representedClassName="CDWorkout" syncable="YES">

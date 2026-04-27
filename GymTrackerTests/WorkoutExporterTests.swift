@@ -2,6 +2,7 @@ import XCTest
 import CoreData
 @testable import GymTracker
 
+@MainActor
 final class WorkoutExporterTests: XCTestCase {
 
     var context: NSManagedObjectContext!
