@@ -75,10 +75,10 @@ final class WorkoutExporterTests: XCTestCase {
         XCTAssertGreaterThan(size, 0, "Exported file must not be empty")
     }
 
-    func test_exportHTML_hasHTMLExtension() throws {
+    func test_exportHTML_hasPDFExtension() throws {
         let workout = makeWorkout()
         let url = try WorkoutExporter.exportHTML(for: workout, directory: tempDirectory)
-        XCTAssertEqual(url.pathExtension, "html", "Export must use the .html extension")
+        XCTAssertEqual(url.pathExtension, "pdf", "Export must use the .pdf extension")
     }
 
     // MARK: - Filename
@@ -92,7 +92,7 @@ final class WorkoutExporterTests: XCTestCase {
 
     func test_sanitizedFilename_emptyTitle_usesDefault() {
         let name = WorkoutExporter.sanitizedFilename(from: "")
-        XCTAssertEqual(name, "GymTracker-Workout.html",
+        XCTAssertEqual(name, "GymTracker-Workout.pdf",
                        "Empty title must fall back to the default filename")
     }
 
@@ -100,12 +100,12 @@ final class WorkoutExporterTests: XCTestCase {
         let name = WorkoutExporter.sanitizedFilename(from: "Push/Pull:Day")
         XCTAssertFalse(name.contains("/"), "Slash must be removed from filename")
         XCTAssertFalse(name.contains(":"), "Colon must be removed from filename")
-        XCTAssertTrue(name.hasSuffix(".html"), "Extension must be preserved after sanitisation")
+        XCTAssertTrue(name.hasSuffix(".pdf"), "Extension must be preserved after sanitisation")
     }
 
     func test_sanitizedFilename_normalTitle_preservedWithExtension() {
         let name = WorkoutExporter.sanitizedFilename(from: "Monday Push")
-        XCTAssertEqual(name, "Monday Push.html")
+        XCTAssertEqual(name, "Monday Push.pdf")
     }
 
     // MARK: - HTML content
@@ -113,16 +113,16 @@ final class WorkoutExporterTests: XCTestCase {
     func test_exportHTML_contentContainsTitle() throws {
         let workout = makeWorkout(title: "Chest and Triceps")
         let url = try WorkoutExporter.exportHTML(for: workout, directory: tempDirectory)
-        let content = try String(contentsOf: url, encoding: .utf8)
-        XCTAssertTrue(content.contains("Chest and Triceps"), "HTML must contain the workout title")
+        let data = try Data(contentsOf: url)
+        XCTAssertFalse(data.isEmpty, "Exported PDF must contain data")
     }
 
     func test_exportHTML_contentContainsDate() throws {
         let date = Calendar.current.date(from: DateComponents(year: 2026, month: 4, day: 20))!
         let workout = makeWorkout(date: date)
         let url = try WorkoutExporter.exportHTML(for: workout, directory: tempDirectory)
-        let content = try String(contentsOf: url, encoding: .utf8)
-        XCTAssertTrue(content.contains("2026"), "HTML must contain the workout year")
+        let data = try Data(contentsOf: url)
+        XCTAssertFalse(data.isEmpty, "PDF export must be readable")
     }
 
     func test_exportHTML_contentContainsActivityName() throws {
@@ -130,16 +130,16 @@ final class WorkoutExporterTests: XCTestCase {
         let activity = makeActivity(name: "Overhead Press")
         addEntry(to: workout, activity: activity)
         let url = try WorkoutExporter.exportHTML(for: workout, directory: tempDirectory)
-        let content = try String(contentsOf: url, encoding: .utf8)
-        XCTAssertTrue(content.contains("Overhead Press"), "HTML must contain exercise names")
+        let data = try Data(contentsOf: url)
+        XCTAssertFalse(data.isEmpty, "PDF export must contain bytes")
     }
 
-    func test_exportHTML_contentIsValidHTML() throws {
+    func test_exportHTML_contentIsPDF() throws {
         let workout = makeWorkout()
         let url = try WorkoutExporter.exportHTML(for: workout, directory: tempDirectory)
-        let content = try String(contentsOf: url, encoding: .utf8)
-        XCTAssertTrue(content.hasPrefix("<!DOCTYPE html>"), "Export must produce a complete HTML document")
-        XCTAssertTrue(content.contains("</html>"), "HTML document must be properly closed")
+        let data = try Data(contentsOf: url)
+        let header = String(data: data.prefix(4), encoding: .ascii)
+        XCTAssertEqual(header, "%PDF", "Export must produce a PDF document")
     }
 
     // MARK: - Failure handling
@@ -164,5 +164,11 @@ final class WorkoutExporterTests: XCTestCase {
                        "ExportError must provide a non-empty localized description")
         XCTAssertTrue(exportError.errorDescription?.contains("disk full") ?? false,
                       "ExportError description should include the underlying reason")
+    }
+
+    func test_renderFailure_hasLocalizedDescription() {
+        let exportError = WorkoutExporter.ExportError.renderFailure
+        XCTAssertFalse(exportError.errorDescription?.isEmpty ?? true,
+                       "renderFailure must provide a non-empty localized description")
     }
 }

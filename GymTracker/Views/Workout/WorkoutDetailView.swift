@@ -12,6 +12,7 @@ struct WorkoutDetailView: View {
     @State private var shareURL: URL? = nil
     @State private var showingShareSheet = false
     @State private var shareError: String? = nil
+    @State private var isExportingShare = false
 
     var body: some View {
         Group {
@@ -40,15 +41,24 @@ struct WorkoutDetailView: View {
                     Button("Edit") { showingEdit = true }
                     Button("Duplicate") { showingDuplicate = true }
                     Button {
-                        do {
-                            shareURL = try WorkoutExporter.exportHTML(for: workout)
-                            showingShareSheet = true
-                        } catch {
-                            shareError = error.localizedDescription
+                        Task { @MainActor in
+                            guard !isExportingShare else { return }
+                            isExportingShare = true
+                            // Let the menu dismiss before presenting the share sheet.
+                            await Task.yield()
+                            defer { isExportingShare = false }
+
+                            do {
+                                shareURL = try WorkoutExporter.exportHTML(for: workout)
+                                showingShareSheet = true
+                            } catch {
+                                shareError = error.localizedDescription
+                            }
                         }
                     } label: {
                         Label("Share", systemImage: "square.and.arrow.up")
                     }
+                    .disabled(isExportingShare)
                     Divider()
                     Button(role: .destructive) {
                         showingDeleteAlert = true
@@ -77,7 +87,9 @@ struct WorkoutDetailView: View {
         .sheet(isPresented: $showingDuplicate) {
             LogWorkoutView(workout: workout, isDuplicate: true)
         }
-        .sheet(isPresented: $showingShareSheet) {
+        .sheet(isPresented: $showingShareSheet, onDismiss: {
+            shareURL = nil
+        }) {
             if let url = shareURL {
                 ShareSheet(items: [url])
             }
