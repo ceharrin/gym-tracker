@@ -1,42 +1,6 @@
 import SwiftUI
 import CoreData
 
-// MARK: - In-memory models for live session
-
-struct LiveSet: Identifiable {
-    var id = UUID()
-    var reps: String = ""
-    var weightKg: String = ""
-    var durationMinutes: String = ""
-    var durationSeconds: String = ""
-    var distanceKm: String = ""
-    var laps: String = ""
-    var customValue: String = ""
-    var customLabel: String = ""
-    var notes: String = ""
-    var isPRAttempt: Bool = false
-
-    static func copying(_ other: LiveSet) -> LiveSet {
-        var s = LiveSet()
-        s.weightKg = other.weightKg
-        s.reps = other.reps
-        s.distanceKm = other.distanceKm
-        s.durationMinutes = other.durationMinutes
-        s.durationSeconds = other.durationSeconds
-        s.laps = other.laps
-        s.customValue = other.customValue
-        s.customLabel = other.customLabel
-        return s
-    }
-}
-
-struct LiveEntry: Identifiable {
-    var id = UUID()
-    var activity: CDActivity
-    var sets: [LiveSet] = [LiveSet()]
-    var notes: String = ""
-}
-
 // MARK: - Main View
 
 struct LogWorkoutView: View {
@@ -219,81 +183,35 @@ struct LogWorkoutView: View {
     // MARK: Load (edit mode)
 
     private func loadWorkout(_ w: CDWorkout) {
-        title = w.title
-        workoutDate = w.date
-        durationMinutes = w.durationMinutes > 0 ? "\(w.durationMinutes)" : ""
-        energyLevel = Int(w.energyLevel)
-        notes = w.notes ?? ""
-        entries = w.sortedEntries.compactMap { entry -> LiveEntry? in
-            guard let activity = entry.activity else { return nil }
-            let liveSets: [LiveSet] = entry.sortedSets.map { set in
-                var s = LiveSet()
-                s.weightKg   = set.weightKg > 0      ? String(format: "%.1f", Units.weightValue(fromKg: set.weightKg))       : ""
-                s.reps       = set.reps > 0           ? "\(set.reps)"                                                         : ""
-                s.distanceKm = set.distanceMeters > 0 ? String(format: "%.2f", Units.distanceValue(fromMeters: set.distanceMeters)) : ""
-                if set.durationSeconds > 0 {
-                    s.durationMinutes = "\(set.durationSeconds / 60)"
-                    s.durationSeconds = String(format: "%02d", set.durationSeconds % 60)
-                }
-                s.laps        = set.laps > 0          ? "\(set.laps)"                                                         : ""
-                s.customValue = set.customValue > 0   ? String(format: "%.1f", set.customValue)                               : ""
-                s.customLabel = set.customLabel ?? ""
-                s.notes       = set.notes ?? ""
-                return s
-            }
-            return LiveEntry(activity: activity, sets: liveSets.isEmpty ? [LiveSet()] : liveSets, notes: entry.notes ?? "")
-        }
+        let data = WorkoutEditor.load(from: w)
+        title = data.title
+        workoutDate = data.date
+        durationMinutes = data.durationMinutes
+        energyLevel = data.energyLevel
+        notes = data.notes
+        entries = data.entries
     }
 
     // MARK: Save
 
     private func save() {
-        let newPRNames = detectPRs()
-
-        let workout: CDWorkout
-        if let existing = existingWorkout, !isDuplicate {
-            workout = existing
-            for entry in existing.sortedEntries {
-                entry.sortedSets.forEach { context.delete($0) }
-                context.delete(entry)
-            }
-        } else {
-            workout = CDWorkout(context: context)
-            workout.id = UUID()
-        }
-
-        workout.date = workoutDate
-        workout.title = title.isEmpty ? "Workout" : title
-        workout.durationMinutes = Int32(durationMinutes) ?? (existingWorkout == nil ? Int32(Date().timeIntervalSince(startTime) / 60) : workout.durationMinutes)
-        workout.energyLevel = Int16(energyLevel)
-        workout.notes = notes.isEmpty ? nil : notes
-
-        for (idx, liveEntry) in entries.enumerated() {
-            let entry = CDWorkoutEntry(context: context)
-            entry.id = UUID()
-            entry.orderIndex = Int16(idx)
-            entry.activity = liveEntry.activity
-            entry.notes = liveEntry.notes.isEmpty ? nil : liveEntry.notes
-            entry.workout = workout
-
-            for (setIdx, liveSet) in liveEntry.sets.enumerated() {
-                let set = CDEntrySet(context: context)
-                set.id = UUID()
-                set.setNumber = Int16(setIdx + 1)
-                set.weightKg = Units.kgFromInput(Double(liveSet.weightKg) ?? 0)
-                set.reps = Int32(liveSet.reps) ?? 0
-                set.distanceMeters = Units.metersFromInput(Double(liveSet.distanceKm) ?? 0)
-                set.durationSeconds = durationToSeconds(liveSet)
-                set.laps = Int32(liveSet.laps) ?? 0
-                set.customValue = Double(liveSet.customValue) ?? 0
-                set.customLabel = liveSet.customLabel.isEmpty ? nil : liveSet.customLabel
-                set.notes = liveSet.notes.isEmpty ? nil : liveSet.notes
-                set.entry = entry
-            }
-        }
-
+        let data = WorkoutEditor.WorkoutData(
+            title: title,
+            date: workoutDate,
+            durationMinutes: durationMinutes,
+            energyLevel: energyLevel,
+            notes: notes,
+            entries: entries
+        )
+        let result: WorkoutEditor.SaveResult
         do {
-            try context.save()
+            result = try WorkoutEditor.save(
+                data: data,
+                context: context,
+                existingWorkout: existingWorkout,
+                isDuplicate: isDuplicate,
+                startTime: startTime
+            )
         } catch {
             context.rollback()
             saveError = error.localizedDescription
@@ -301,52 +219,20 @@ struct LogWorkoutView: View {
         }
 
         let isNew = existingWorkout == nil || isDuplicate
-        let savedDate = workout.date
-        let savedDuration = Int(workout.durationMinutes)
         Task {
             await WorkoutHealthKitManager.shared.syncWorkout(
-                date: savedDate,
-                durationMinutes: savedDuration,
+                date: result.savedWorkout.date,
+                durationMinutes: Int(result.savedWorkout.durationMinutes),
                 isNew: isNew
             )
         }
 
-        if newPRNames.isEmpty {
+        if result.newPRNames.isEmpty {
             dismiss()
         } else {
-            confirmedPRs = newPRNames
+            confirmedPRs = result.newPRNames
             showingCelebration = true
         }
-    }
-
-    private func detectPRs() -> [String] {
-        var names: [String] = []
-        for liveEntry in entries {
-            let prSets = liveEntry.sets.filter(\.isPRAttempt)
-            guard !prSets.isEmpty else { continue }
-            let history = historicalSets(for: liveEntry.activity, excludingWorkout: existingWorkout)
-            let metric = liveEntry.activity.metric
-            let hasNewPR = prSets.contains { isNewPersonalRecord(liveSet: $0, metric: metric, against: history) }
-            if hasNewPR, !names.contains(liveEntry.activity.name) {
-                names.append(liveEntry.activity.name)
-            }
-        }
-        return names
-    }
-
-    private func historicalSets(for activity: CDActivity, excludingWorkout: CDWorkout? = nil) -> [CDEntrySet] {
-        let request = CDWorkoutEntry.fetchRequest()
-        request.predicate = NSPredicate(format: "activity == %@", activity)
-        let entries = (try? context.fetch(request)) ?? []
-        return entries
-            .filter { excludingWorkout == nil || $0.workout != excludingWorkout }
-            .flatMap(\.sortedSets)
-    }
-
-    private func durationToSeconds(_ set: LiveSet) -> Int32 {
-        let m = Int32(set.durationMinutes) ?? 0
-        let s = Int32(set.durationSeconds) ?? 0
-        return m * 60 + s
     }
 }
 

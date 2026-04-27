@@ -17,6 +17,7 @@ struct EditProfileView: View {
     @State private var goals: String = ""
     @State private var selectedPhotoItem: PhotosPickerItem? = nil
     @State private var pendingPhotoData: Data? = nil
+    @State private var saveError: String? = nil
 
     var body: some View {
         NavigationStack {
@@ -91,6 +92,14 @@ struct EditProfileView: View {
                 }
             }
             .onAppear { loadProfile() }
+            .alert("Couldn't Save Profile", isPresented: Binding(
+                get: { saveError != nil },
+                set: { if !$0 { saveError = nil } }
+            )) {
+                Button("OK", role: .cancel) { saveError = nil }
+            } message: {
+                Text(saveError ?? "An unknown error occurred.")
+            }
         }
     }
 
@@ -166,8 +175,12 @@ struct EditProfileView: View {
         if let data = pendingPhotoData {
             p.photoData = data
         }
-        try? context.save()
-        dismiss()
+        do {
+            try context.saveIfChanged()
+            dismiss()
+        } catch {
+            saveError = error.localizedDescription
+        }
     }
 }
 
@@ -181,6 +194,7 @@ struct AddMeasurementView: View {
     @State private var bodyFatPercent: String = ""
     @State private var notes: String = ""
     @State private var date: Date = Date()
+    @State private var saveError: String? = nil
 
     var body: some View {
         NavigationStack {
@@ -216,6 +230,14 @@ struct AddMeasurementView: View {
                         .disabled(weightInput.isEmpty)
                 }
             }
+            .alert("Couldn't Save Measurement", isPresented: Binding(
+                get: { saveError != nil },
+                set: { if !$0 { saveError = nil } }
+            )) {
+                Button("OK", role: .cancel) { saveError = nil }
+            } message: {
+                Text(saveError ?? "An unknown error occurred.")
+            }
         }
     }
 
@@ -227,7 +249,11 @@ struct AddMeasurementView: View {
         m.bodyFatPercent = Double(bodyFatPercent) ?? 0
         m.notes = notes.isEmpty ? nil : notes
         m.profile = profile
-        try? context.save()
-        dismiss()
+        do {
+            try context.saveIfChanged()
+            dismiss()
+        } catch {
+            saveError = error.localizedDescription
+        }
     }
 }

@@ -66,7 +66,11 @@ struct PersistenceController {
 
     func save() {
         guard context.hasChanges else { return }
-        try? context.save()
+        do { try context.save() } catch {
+            // Failures here come from seeding/profile creation at launch.
+            // A fatalError would crash in production; logging is the safest response.
+            print("PersistenceController.save: \(error)")
+        }
     }
 
     private func ensureProfileExists() {
@@ -78,5 +82,16 @@ struct PersistenceController {
         profile.createdAt = Date()
         profile.heightCm = 0
         save()
+    }
+}
+
+// MARK: - Convenience save
+
+extension NSManagedObjectContext {
+    /// Saves only when there are pending changes. Throws on failure so callers
+    /// can roll back and surface errors rather than silently discarding data.
+    func saveIfChanged() throws {
+        guard hasChanges else { return }
+        try save()
     }
 }

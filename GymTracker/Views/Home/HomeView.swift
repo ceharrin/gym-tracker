@@ -178,11 +178,11 @@ struct WorkoutRowCard: View {
     var body: some View {
         HStack(spacing: 14) {
             RoundedRectangle(cornerRadius: 10)
-                .fill(Color.accentColor.opacity(0.15))
+                .fill(workout.primaryCategoryColor.opacity(0.15))
                 .frame(width: 48, height: 48)
                 .overlay {
                     Image(systemName: categoryIcon)
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(workout.primaryCategoryColor)
                 }
 
             VStack(alignment: .leading, spacing: 3) {
@@ -213,11 +213,5 @@ struct WorkoutRowCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
-    private var categoryIcon: String {
-        guard let firstEntry = workout.sortedEntries.first,
-              let category = firstEntry.activity?.activityCategory else {
-            return "dumbbell.fill"
-        }
-        return category.icon
-    }
+    private var categoryIcon: String { workout.primaryCategoryIcon }
 }

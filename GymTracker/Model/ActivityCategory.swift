@@ -99,4 +99,37 @@ enum PrimaryMetric: String, CaseIterable, Identifiable {
         case .custom:       return nil
         }
     }
+
+    // MARK: - Progress chart helpers
+
+    /// Y-axis label used in progress charts and exported reports.
+    var chartYLabel: String {
+        switch self {
+        case .weightReps:   return Units.weightUnit
+        case .distanceTime: return Units.distanceUnit
+        case .lapsTime:     return "laps"
+        case .duration:     return "min"
+        case .custom:       return "value"
+        }
+    }
+
+    /// Extracts the single representative value from a set for charting
+    /// (best set, converted to display units).
+    func chartValue(from set: CDEntrySet) -> Double {
+        switch self {
+        case .weightReps:   return Units.weightValue(fromKg: set.weightKg)
+        case .distanceTime: return Units.distanceValue(fromMeters: set.distanceMeters)
+        case .lapsTime:     return Double(set.laps)
+        case .duration:     return Double(set.durationSeconds) / 60
+        case .custom:       return set.customValue
+        }
+    }
+
+    /// Formats a chart value for annotation labels.
+    func formattedChartValue(_ value: Double) -> String {
+        switch self {
+        case .lapsTime, .duration: return String(format: "%.0f", value)
+        default:                   return String(format: "%.1f", value)
+        }
+    }
 }

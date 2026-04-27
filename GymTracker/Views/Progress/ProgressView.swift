@@ -227,7 +227,7 @@ struct ProgressView: View {
                 Text(activity.name)
                     .font(.headline)
                 Spacer()
-                Text(chartYLabel(for: activity))
+                Text(activity.metric.chartYLabel)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -239,18 +239,18 @@ struct ProgressView: View {
                     ForEach(dataPoints, id: \.date) { point in
                         LineMark(
                             x: .value("Date", point.date),
-                            y: .value(chartYLabel(for: activity), point.value)
+                            y: .value(activity.metric.chartYLabel, point.value)
                         )
                         .foregroundStyle(activity.activityCategory.color)
                         .interpolationMethod(.catmullRom)
 
                         PointMark(
                             x: .value("Date", point.date),
-                            y: .value(chartYLabel(for: activity), point.value)
+                            y: .value(activity.metric.chartYLabel, point.value)
                         )
                         .foregroundStyle(activity.activityCategory.color)
                         .annotation(position: .top) {
-                            Text(formattedValue(point.value, metric: activity.metric))
+                            Text(activity.metric.formattedChartValue(point.value))
                                 .font(.system(size: 9))
                                 .foregroundStyle(.secondary)
                         }
@@ -326,46 +326,17 @@ struct ProgressView: View {
     }
 
     private func chartData(for activity: CDActivity) -> [ChartPoint] {
-        let entries = activity.sortedEntries.filter { entry in
-            guard let date = entry.workout?.date else { return false }
-            if let cutoff = cutoffDate { return date >= cutoff }
-            return true
-        }
-
-        return entries.compactMap { entry -> ChartPoint? in
-            guard let date = entry.workout?.date,
-                  let set = entry.bestSet else { return nil }
-            let value: Double
-            switch activity.metric {
-            case .weightReps:   value = Units.weightValue(fromKg: set.weightKg)
-            case .distanceTime: value = Units.distanceValue(fromMeters: set.distanceMeters)
-            case .lapsTime:     value = Double(set.laps)
-            case .duration:     value = Double(set.durationSeconds) / 60
-            case .custom:       value = set.customValue
+        activity.sortedEntries
+            .filter { entry in
+                guard let date = entry.workout?.date else { return false }
+                if let cutoff = cutoffDate { return date >= cutoff }
+                return true
             }
-            return ChartPoint(date: date, value: value)
-        }
-        .sorted { $0.date < $1.date }
-    }
-
-    private func chartYLabel(for activity: CDActivity) -> String {
-        switch activity.metric {
-        case .weightReps:   return Units.weightUnit
-        case .distanceTime: return Units.distanceUnit
-        case .lapsTime:     return "laps"
-        case .duration:     return "min"
-        case .custom:       return "value"
-        }
-    }
-
-    private func formattedValue(_ value: Double, metric: PrimaryMetric) -> String {
-        switch metric {
-        case .weightReps:   return String(format: "%.1f", value)
-        case .distanceTime: return String(format: "%.1f", value)
-        case .lapsTime:     return String(format: "%.0f", value)
-        case .duration:     return String(format: "%.0f", value)
-        case .custom:       return String(format: "%.1f", value)
-        }
+            .compactMap { entry -> ChartPoint? in
+                guard let date = entry.workout?.date, let set = entry.bestSet else { return nil }
+                return ChartPoint(date: date, value: activity.metric.chartValue(from: set))
+            }
+            .sorted { $0.date < $1.date }
     }
 
     private func allSetsForActivity(_ activity: CDActivity) -> [CDEntrySet] {

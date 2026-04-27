@@ -96,7 +96,7 @@ private struct ActivityExportCard: View {
                     )
                     .foregroundStyle(activity.activityCategory.color)
                     .annotation(position: .top) {
-                        Text(formattedValue(point.value))
+                        Text(activity.metric.formattedChartValue(point.value))
                             .font(.system(size: 9))
                             .foregroundStyle(.secondary)
                     }
@@ -143,37 +143,12 @@ private struct ActivityExportCard: View {
             }
             .compactMap { entry -> ChartPoint? in
                 guard let date = entry.workout?.date, let set = entry.bestSet else { return nil }
-                return ChartPoint(date: date, value: metricValue(set))
+                return ChartPoint(date: date, value: activity.metric.chartValue(from: set))
             }
             .sorted { $0.date < $1.date }
     }
 
-    private func metricValue(_ set: CDEntrySet) -> Double {
-        switch activity.metric {
-        case .weightReps:   return Units.weightValue(fromKg: set.weightKg)
-        case .distanceTime: return Units.distanceValue(fromMeters: set.distanceMeters)
-        case .lapsTime:     return Double(set.laps)
-        case .duration:     return Double(set.durationSeconds) / 60
-        case .custom:       return set.customValue
-        }
-    }
-
-    private var yLabel: String {
-        switch activity.metric {
-        case .weightReps:   return Units.weightUnit
-        case .distanceTime: return Units.distanceUnit
-        case .lapsTime:     return "laps"
-        case .duration:     return "min"
-        case .custom:       return "value"
-        }
-    }
-
-    private func formattedValue(_ value: Double) -> String {
-        switch activity.metric {
-        case .lapsTime, .duration: return String(format: "%.0f", value)
-        default:                   return String(format: "%.1f", value)
-        }
-    }
+    private var yLabel: String { activity.metric.chartYLabel }
 
     private func prText(from sets: [CDEntrySet]) -> String {
         switch activity.metric {

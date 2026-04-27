@@ -3,14 +3,11 @@ import CoreData
 @testable import GymTracker
 
 enum CoreDataTestHelper {
+    /// Returns an in-memory managed object context backed by the same
+    /// NSPersistentCloudKitContainer the production app uses. This ensures
+    /// tests exercise the real stack (merge policies, model version, etc.)
+    /// rather than a plain NSPersistentContainer that can silently diverge.
     static func makeContext() -> NSManagedObjectContext {
-        let container = NSPersistentContainer(name: "GymTracker")
-        let description = NSPersistentStoreDescription()
-        description.type = NSInMemoryStoreType
-        container.persistentStoreDescriptions = [description]
-        container.loadPersistentStores { _, error in
-            if let error { fatalError(error.localizedDescription) }
-        }
-        return container.viewContext
+        PersistenceController(inMemory: true).context
     }
 }

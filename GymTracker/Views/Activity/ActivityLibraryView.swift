@@ -103,7 +103,7 @@ struct ActivityLibraryView: View {
             guard !activity.isPreset else { continue }
             context.delete(activity)
         }
-        try? context.save()
+        try? context.saveIfChanged()
     }
 }
 

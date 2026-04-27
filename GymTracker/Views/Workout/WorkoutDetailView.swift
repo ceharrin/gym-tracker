@@ -62,7 +62,7 @@ struct WorkoutDetailView: View {
             Button("Delete", role: .destructive) {
                 isDeleting = true
                 context.delete(workout)
-                try? context.save()
+                try? context.saveIfChanged()
                 dismiss()
             }
             Button("Cancel", role: .cancel) {}

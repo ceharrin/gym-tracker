@@ -94,7 +94,7 @@ struct WorkoutListView: View {
         for idx in offsets {
             context.delete(items[idx])
         }
-        try? context.save()
+        try? context.saveIfChanged()
     }
 }
 
@@ -138,11 +138,6 @@ struct WorkoutListRow: View {
         .padding(.vertical, 2)
     }
 
-    private var categoryIcon: String {
-        workout.sortedEntries.first?.activity?.activityCategory.icon ?? "dumbbell.fill"
-    }
-
-    private var categoryColor: Color {
-        workout.sortedEntries.first?.activity?.activityCategory.color ?? Color.accentColor
-    }
+    private var categoryIcon: String { workout.primaryCategoryIcon }
+    private var categoryColor: Color  { workout.primaryCategoryColor }
 }

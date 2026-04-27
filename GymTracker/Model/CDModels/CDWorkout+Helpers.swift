@@ -1,5 +1,6 @@
 import Foundation
 import CoreData
+import SwiftUI
 
 extension CDWorkout {
     var sortedEntries: [CDWorkoutEntry] {
@@ -23,5 +24,15 @@ extension CDWorkout {
         f.dateStyle = .medium
         f.timeStyle = .none
         return f.string(from: date)
+    }
+
+    /// SF Symbol name for the first activity's category (or a fallback dumbbell).
+    var primaryCategoryIcon: String {
+        sortedEntries.first?.activity?.activityCategory.icon ?? "dumbbell.fill"
+    }
+
+    /// Accent color for the first activity's category (or the app accent color).
+    var primaryCategoryColor: Color {
+        sortedEntries.first?.activity?.activityCategory.color ?? Color.accentColor
     }
 }
