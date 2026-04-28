@@ -15,6 +15,7 @@ struct WorkoutDetailView: View {
     @State private var isExportingShare = false
     @State private var isRetryingHealthSync = false
     @State private var heartRateSummary: WorkoutHeartRateSummary? = nil
+    @State private var persistenceAlert: PersistenceAlertState? = nil
 
     var body: some View {
         Group {
@@ -86,10 +87,15 @@ struct WorkoutDetailView: View {
         }
         .alert("Delete Workout?", isPresented: $showingDeleteAlert) {
             Button("Delete", role: .destructive) {
-                isDeleting = true
                 context.delete(workout)
-                try? context.saveIfChanged()
-                dismiss()
+                do {
+                    try context.saveIfChanged()
+                    isDeleting = true
+                    dismiss()
+                } catch {
+                    context.rollback()
+                    persistenceAlert = PersistenceAlertState(title: "Couldn't Delete Workout", error: error)
+                }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -116,6 +122,7 @@ struct WorkoutDetailView: View {
         } message: {
             Text(shareError ?? "An unknown error occurred.")
         }
+        .persistenceErrorAlert($persistenceAlert)
         .task(id: workout.objectID) {
             heartRateSummary = await WorkoutHealthKitManager.shared.loadHeartRateSummary(for: workout)
         }

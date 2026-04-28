@@ -11,6 +11,7 @@ struct WorkoutListView: View {
     @State private var showingLogWorkout = false
     @State private var showingPrintSummary = false
     @State private var searchText = ""
+    @State private var persistenceAlert: PersistenceAlertState? = nil
 
     private var filtered: [CDWorkout] {
         guard !searchText.isEmpty else { return Array(workouts) }
@@ -40,7 +41,7 @@ struct WorkoutListView: View {
                                     NavigationLink {
                                         WorkoutDetailView(workout: workout)
                                     } label: {
-                                        WorkoutListRow(workout: workout)
+                                        WorkoutSummaryRow(workout: workout, style: .list)
                                     }
                                 }
                                 .onDelete { delete(items: items, offsets: $0) }
@@ -69,6 +70,7 @@ struct WorkoutListView: View {
             .sheet(isPresented: $showingPrintSummary) {
                 PrintSummaryView(allWorkouts: Array(workouts))
             }
+            .persistenceErrorAlert($persistenceAlert)
         }
     }
 
@@ -87,28 +89,32 @@ struct WorkoutListView: View {
         for idx in offsets {
             context.delete(items[idx])
         }
-        try? context.saveIfChanged()
+        do {
+            try context.saveIfChanged()
+        } catch {
+            context.rollback()
+            persistenceAlert = PersistenceAlertState(title: "Couldn't Delete Workout", error: error)
+        }
     }
 }
 
-struct WorkoutListRow: View {
+enum WorkoutSummaryRowStyle {
+    case card
+    case list
+}
+
+struct WorkoutSummaryRow: View {
     let workout: CDWorkout
+    let style: WorkoutSummaryRowStyle
 
     var body: some View {
-        HStack(spacing: 12) {
-            ZStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(categoryColor.opacity(0.15))
-                    .frame(width: 40, height: 40)
-                Image(systemName: categoryIcon)
-                    .foregroundStyle(categoryColor)
-                    .font(.subheadline)
-            }
+        HStack(spacing: style == .card ? 14 : 12) {
+            iconBadge
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(workout.title)
                     .font(.subheadline)
-                    .fontWeight(.medium)
+                    .fontWeight(style == .card ? .semibold : .medium)
                 Text(workout.activitySummary)
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -118,17 +124,46 @@ struct WorkoutListRow: View {
             Spacer()
 
             VStack(alignment: .trailing, spacing: 2) {
-                Text(workout.date, style: .date)
+                Text(workout.formattedDate)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                 if workout.durationMinutes > 0 {
-                    Text("\(workout.durationMinutes)m")
+                    Text(durationText)
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
             }
         }
-        .padding(.vertical, 2)
+        .padding(style == .card ? 14 : 0)
+        .padding(.vertical, style == .list ? 2 : 0)
+        .background(style == .card ? Color(.secondarySystemBackground) : Color.clear)
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+    }
+
+    @ViewBuilder
+    private var iconBadge: some View {
+        if style == .card {
+            RoundedRectangle(cornerRadius: 10)
+                .fill(categoryColor.opacity(0.15))
+                .frame(width: 48, height: 48)
+                .overlay {
+                    Image(systemName: categoryIcon)
+                        .foregroundStyle(categoryColor)
+                }
+        } else {
+            ZStack {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(categoryColor.opacity(0.15))
+                    .frame(width: 40, height: 40)
+                Image(systemName: categoryIcon)
+                    .foregroundStyle(categoryColor)
+                    .font(.subheadline)
+            }
+        }
+    }
+
+    private var durationText: String {
+        style == .card ? "\(workout.durationMinutes) min" : "\(workout.durationMinutes)m"
     }
 
     private var categoryIcon: String { workout.primaryCategoryIcon }

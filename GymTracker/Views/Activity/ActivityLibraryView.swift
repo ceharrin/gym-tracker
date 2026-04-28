@@ -12,6 +12,7 @@ struct ActivityLibraryView: View {
     @State private var searchText = ""
     @State private var selectedCategory: ActivityCategory? = nil
     @State private var showingAdd = false
+    @State private var persistenceAlert: PersistenceAlertState? = nil
 
     private var filtered: [CDActivity] {
         activities.filter { activity in
@@ -75,6 +76,7 @@ struct ActivityLibraryView: View {
             .sheet(isPresented: $showingAdd) {
                 AddActivityView()
             }
+            .persistenceErrorAlert($persistenceAlert)
         }
     }
 
@@ -103,7 +105,12 @@ struct ActivityLibraryView: View {
             guard !activity.isPreset else { continue }
             context.delete(activity)
         }
-        try? context.saveIfChanged()
+        do {
+            try context.saveIfChanged()
+        } catch {
+            context.rollback()
+            persistenceAlert = PersistenceAlertState(title: "Couldn't Delete Activity", error: error)
+        }
     }
 }
 

@@ -120,7 +120,7 @@ struct HomeView: View {
                 NavigationLink {
                     WorkoutDetailView(workout: workout)
                 } label: {
-                    WorkoutRowCard(workout: workout)
+                    WorkoutSummaryRow(workout: workout, style: .card)
                 }
                 .buttonStyle(.plain)
             }
@@ -170,48 +170,4 @@ struct StatCard: View {
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 14))
     }
-}
-
-struct WorkoutRowCard: View {
-    let workout: CDWorkout
-
-    var body: some View {
-        HStack(spacing: 14) {
-            RoundedRectangle(cornerRadius: 10)
-                .fill(workout.primaryCategoryColor.opacity(0.15))
-                .frame(width: 48, height: 48)
-                .overlay {
-                    Image(systemName: categoryIcon)
-                        .foregroundStyle(workout.primaryCategoryColor)
-                }
-
-            VStack(alignment: .leading, spacing: 3) {
-                Text(workout.title)
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                Text(workout.activitySummary)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
-
-            Spacer()
-
-            VStack(alignment: .trailing, spacing: 3) {
-                Text(workout.formattedDate)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                if workout.durationMinutes > 0 {
-                    Text("\(workout.durationMinutes) min")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                }
-            }
-        }
-        .padding(14)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-    }
-
-    private var categoryIcon: String { workout.primaryCategoryIcon }
 }

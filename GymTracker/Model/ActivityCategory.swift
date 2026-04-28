@@ -1,4 +1,5 @@
 import Foundation
+import CoreData
 import SwiftUI
 
 enum ActivityCategory: String, CaseIterable, Identifiable {
@@ -131,5 +132,111 @@ enum PrimaryMetric: String, CaseIterable, Identifiable {
         case .lapsTime, .duration: return String(format: "%.0f", value)
         default:                   return String(format: "%.1f", value)
         }
+    }
+
+    func personalRecords(from sets: [CDEntrySet]) -> [ProgressPersonalRecord] {
+        switch self {
+        case .weightReps:
+            var records: [ProgressPersonalRecord] = []
+            if let best = sets.max(by: { $0.weightKg < $1.weightKg }) {
+                records.append(
+                    ProgressPersonalRecord(
+                        label: "Heaviest Weight",
+                        value: "\(Units.displayWeight(kg: best.weightKg)) × \(best.reps) reps"
+                    )
+                )
+            }
+            if let most = sets.max(by: { $0.reps < $1.reps }) {
+                records.append(
+                    ProgressPersonalRecord(
+                        label: "Most Reps",
+                        value: "\(most.reps) @ \(Units.displayWeight(kg: most.weightKg))"
+                    )
+                )
+            }
+            return records
+        case .distanceTime:
+            var records: [ProgressPersonalRecord] = []
+            if let longest = sets.max(by: { $0.distanceMeters < $1.distanceMeters }) {
+                records.append(
+                    ProgressPersonalRecord(
+                        label: "Longest Distance",
+                        value: Units.displayDistance(meters: longest.distanceMeters)
+                    )
+                )
+            }
+            if let fastest = sets.filter({ $0.distanceMeters > 0 }).min(by: {
+                Double($0.durationSeconds) / $0.distanceMeters < Double($1.durationSeconds) / $1.distanceMeters
+            }), let pace = fastest.pacePerUnit {
+                records.append(
+                    ProgressPersonalRecord(
+                        label: "Best Pace",
+                        value: pace
+                    )
+                )
+            }
+            return records
+        case .lapsTime:
+            guard let most = sets.max(by: { $0.laps < $1.laps }) else { return [] }
+            return [ProgressPersonalRecord(label: "Most Laps", value: "\(most.laps) laps")]
+        case .duration:
+            guard let longest = sets.max(by: { $0.durationSeconds < $1.durationSeconds }) else { return [] }
+            return [ProgressPersonalRecord(label: "Longest Session", value: longest.formattedDuration)]
+        case .custom:
+            guard let best = sets.max(by: { $0.customValue < $1.customValue }) else { return [] }
+            return [
+                ProgressPersonalRecord(
+                    label: "Best",
+                    value: String(format: "%.1f %@", best.customValue, best.customLabel ?? "")
+                )
+            ]
+        }
+    }
+
+    func primaryRecordSummary(from sets: [CDEntrySet]) -> String? {
+        personalRecords(from: sets).first?.value
+    }
+}
+
+struct ProgressChartPoint {
+    let date: Date
+    let value: Double
+}
+
+struct ProgressPersonalRecord: Identifiable {
+    let label: String
+    let value: String
+
+    var id: String { label }
+}
+
+extension CDActivity {
+    func progressEntries(cutoffDate: Date?) -> [CDWorkoutEntry] {
+        sortedEntries.filter { entry in
+            guard let date = entry.workout?.date else { return false }
+            if let cutoffDate { return date >= cutoffDate }
+            return true
+        }
+    }
+
+    func progressChartPoints(cutoffDate: Date?) -> [ProgressChartPoint] {
+        progressEntries(cutoffDate: cutoffDate)
+            .compactMap { entry -> ProgressChartPoint? in
+                guard let date = entry.workout?.date, let set = entry.bestSet else { return nil }
+                return ProgressChartPoint(date: date, value: metric.chartValue(from: set))
+            }
+            .sorted { $0.date < $1.date }
+    }
+
+    func progressSets(cutoffDate: Date?) -> [CDEntrySet] {
+        progressEntries(cutoffDate: cutoffDate).flatMap { $0.sortedSets }
+    }
+
+    func progressPersonalRecords(cutoffDate: Date?) -> [ProgressPersonalRecord] {
+        metric.personalRecords(from: progressSets(cutoffDate: cutoffDate))
+    }
+
+    func progressPrimaryRecordSummary(cutoffDate: Date?) -> String? {
+        metric.primaryRecordSummary(from: progressSets(cutoffDate: cutoffDate))
     }
 }

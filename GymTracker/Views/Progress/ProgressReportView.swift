@@ -109,21 +109,13 @@ private struct ActivityExportCard: View {
 
     @ViewBuilder
     private var prSection: some View {
-        let allSets = activity.sortedEntries
-            .filter { entry in
-                guard let date = entry.workout?.date else { return false }
-                if let cutoffDate { return date >= cutoffDate }
-                return true
-            }
-            .flatMap { $0.sortedSets }
-
-        if !allSets.isEmpty {
+        if let record = activity.progressPrimaryRecordSummary(cutoffDate: cutoffDate) {
             Divider()
             HStack {
                 Image(systemName: "trophy.fill").foregroundStyle(.orange)
                 Text("Personal Best").font(.caption).fontWeight(.semibold)
                 Spacer()
-                Text(prText(from: allSets))
+                Text(record)
                     .font(.caption)
                     .foregroundStyle(.secondary)
             }
@@ -132,45 +124,7 @@ private struct ActivityExportCard: View {
 
     // MARK: - Data helpers
 
-    private struct ChartPoint { let date: Date; let value: Double }
-
-    private var chartPoints: [ChartPoint] {
-        activity.sortedEntries
-            .filter { entry in
-                guard let date = entry.workout?.date else { return false }
-                if let cutoffDate { return date >= cutoffDate }
-                return true
-            }
-            .compactMap { entry -> ChartPoint? in
-                guard let date = entry.workout?.date, let set = entry.bestSet else { return nil }
-                return ChartPoint(date: date, value: activity.metric.chartValue(from: set))
-            }
-            .sorted { $0.date < $1.date }
-    }
+    private var chartPoints: [ProgressChartPoint] { activity.progressChartPoints(cutoffDate: cutoffDate) }
 
     private var yLabel: String { activity.metric.chartYLabel }
-
-    private func prText(from sets: [CDEntrySet]) -> String {
-        switch activity.metric {
-        case .weightReps:
-            if let best = sets.max(by: { $0.weightKg < $1.weightKg }) {
-                return "\(Units.displayWeight(kg: best.weightKg)) × \(best.reps) reps"
-            }
-        case .distanceTime:
-            if let best = sets.max(by: { $0.distanceMeters < $1.distanceMeters }) {
-                return Units.displayDistance(meters: best.distanceMeters)
-            }
-        case .lapsTime:
-            if let best = sets.max(by: { $0.laps < $1.laps }) { return "\(best.laps) laps" }
-        case .duration:
-            if let best = sets.max(by: { $0.durationSeconds < $1.durationSeconds }) {
-                return best.formattedDuration
-            }
-        case .custom:
-            if let best = sets.max(by: { $0.customValue < $1.customValue }) {
-                return String(format: "%.1f %@", best.customValue, best.customLabel ?? "")
-            }
-        }
-        return ""
-    }
 }

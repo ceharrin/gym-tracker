@@ -1,6 +1,7 @@
 import CoreData
 import CloudKit
 import Foundation
+import SwiftUI
 
 struct PersistenceController {
     static let shared: PersistenceController = {
@@ -14,10 +15,26 @@ struct PersistenceController {
     // and the app's entitlements.
     static let iCloudContainerIdentifier = "iCloud.com.ceharrin.GymTracker"
 
+    /// Reuse one managed object model instance across containers so tests do not
+    /// accumulate duplicate entity descriptions for the same NSManagedObject subclasses.
+    static let managedObjectModel: NSManagedObjectModel = {
+        let bundle = Bundle(for: ModelBundleToken.self)
+
+        guard let modelURL = bundle.url(forResource: "GymTracker", withExtension: "momd"),
+              let model = NSManagedObjectModel(contentsOf: modelURL) else {
+            fatalError("Unable to load GymTracker.momd from bundle \(bundle.bundlePath)")
+        }
+
+        return model
+    }()
+
     let container: NSPersistentCloudKitContainer
 
     init(inMemory: Bool = false) {
-        container = NSPersistentCloudKitContainer(name: "GymTracker")
+        container = NSPersistentCloudKitContainer(
+            name: "GymTracker",
+            managedObjectModel: Self.managedObjectModel
+        )
 
         if inMemory {
             // Use a proper in-memory store description rather than /dev/null.
@@ -83,7 +100,10 @@ struct PersistenceController {
         profile.heightCm = 0
         save()
     }
+
 }
+
+private final class ModelBundleToken {}
 
 // MARK: - Convenience save
 
@@ -93,5 +113,34 @@ extension NSManagedObjectContext {
     func saveIfChanged() throws {
         guard hasChanges else { return }
         try save()
+    }
+}
+
+struct PersistenceAlertState: Identifiable {
+    let id = UUID()
+    let title: String
+    let message: String
+
+    init(title: String, message: String) {
+        self.title = title
+        self.message = message
+    }
+
+    init(title: String, error: Error, fallbackMessage: String = "An unknown error occurred.") {
+        self.title = title
+        let description = error.localizedDescription.trimmingCharacters(in: .whitespacesAndNewlines)
+        self.message = description.isEmpty ? fallbackMessage : description
+    }
+}
+
+extension View {
+    func persistenceErrorAlert(_ alert: Binding<PersistenceAlertState?>) -> some View {
+        self.alert(item: alert) { state in
+            Alert(
+                title: Text(state.title),
+                message: Text(state.message),
+                dismissButton: .cancel(Text("OK"))
+            )
+        }
     }
 }

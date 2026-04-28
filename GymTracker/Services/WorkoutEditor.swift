@@ -14,7 +14,6 @@ struct LiveSet: Identifiable {
     var customValue: String = ""
     var customLabel: String = ""
     var notes: String = ""
-    var isWarmup: Bool = false
     var isPRAttempt: Bool = false
 
     static func copying(_ other: LiveSet) -> LiveSet {
@@ -27,7 +26,6 @@ struct LiveSet: Identifiable {
         s.laps = other.laps
         s.customValue = other.customValue
         s.customLabel = other.customLabel
-        s.isWarmup = other.isWarmup
         return s
     }
 }
@@ -59,6 +57,26 @@ enum WorkoutEditor {
         let newPRNames: [String]
     }
 
+    static func initialData(existingWorkout: CDWorkout?, isDuplicate: Bool, now: Date) -> WorkoutData {
+        guard let workout = existingWorkout else {
+            return WorkoutData(
+                title: defaultWorkoutTitle(on: now),
+                date: now,
+                durationMinutes: "",
+                energyLevel: 7,
+                notes: "",
+                entries: []
+            )
+        }
+
+        var data = load(from: workout)
+        if isDuplicate {
+            data.date = now
+            data.durationMinutes = ""
+        }
+        return data
+    }
+
     // MARK: Load
 
     /// Maps a persisted CDWorkout into an editable WorkoutData value.
@@ -77,7 +95,6 @@ enum WorkoutEditor {
                 s.customValue = set.customValue > 0 ? String(format: "%.1f", set.customValue) : ""
                 s.customLabel = set.customLabel ?? ""
                 s.notes       = set.notes ?? ""
-                s.isWarmup    = set.isWarmup
                 return s
             }
             return mapped.isEmpty ? [LiveSet()] : mapped
@@ -155,7 +172,6 @@ enum WorkoutEditor {
                 set.laps = Int32(liveSet.laps) ?? 0
                 set.customValue = Double(liveSet.customValue) ?? 0
                 set.customLabel = liveSet.customLabel.isEmpty ? nil : liveSet.customLabel
-                set.isWarmup = liveSet.isWarmup
                 set.notes = liveSet.notes.isEmpty ? nil : liveSet.notes
                 set.entry = entry
             }
@@ -204,5 +220,11 @@ enum WorkoutEditor {
         let m = Int32(set.durationMinutes) ?? 0
         let s = Int32(set.durationSeconds) ?? 0
         return m * 60 + s
+    }
+
+    private static func defaultWorkoutTitle(on date: Date) -> String {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "EEEE"
+        return "\(formatter.string(from: date)) Workout"
     }
 }

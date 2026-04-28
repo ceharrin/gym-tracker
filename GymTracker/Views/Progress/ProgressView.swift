@@ -218,7 +218,7 @@ struct ProgressView: View {
 
     @ViewBuilder
     private func activityChart(for activity: CDActivity) -> some View {
-        let dataPoints = chartData(for: activity)
+        let dataPoints = activity.progressChartPoints(cutoffDate: cutoffDate)
 
         VStack(alignment: .leading, spacing: 12) {
             HStack {
@@ -271,76 +271,23 @@ struct ProgressView: View {
 
     @ViewBuilder
     private func personalRecordCard(for activity: CDActivity) -> some View {
-        let allSets = allSetsForActivity(activity)
-        if allSets.isEmpty {
+        let records = activity.progressPersonalRecords(cutoffDate: cutoffDate)
+        if records.isEmpty {
             EmptyView()
         } else {
-
         VStack(alignment: .leading, spacing: 12) {
             Label("Personal Records", systemImage: "trophy.fill")
                 .font(.headline)
                 .foregroundStyle(.orange)
 
-            switch activity.metric {
-            case .weightReps:
-                if let best = allSets.max(by: { $0.weightKg < $1.weightKg }) {
-                    PRRow(label: "Heaviest Weight", value: "\(Units.displayWeight(kg: best.weightKg)) × \(best.reps) reps")
-                }
-                if let most = allSets.max(by: { $0.reps < $1.reps }) {
-                    PRRow(label: "Most Reps", value: "\(most.reps) @ \(Units.displayWeight(kg: most.weightKg))")
-                }
-            case .distanceTime:
-                if let longest = allSets.max(by: { $0.distanceMeters < $1.distanceMeters }) {
-                    PRRow(label: "Longest Distance", value: Units.displayDistance(meters: longest.distanceMeters))
-                }
-                if let fastest = allSets.filter({ $0.distanceMeters > 0 }).min(by: {
-                    Double($0.durationSeconds) / $0.distanceMeters < Double($1.durationSeconds) / $1.distanceMeters
-                }), let pace = fastest.pacePerUnit {
-                    PRRow(label: "Best Pace", value: pace)
-                }
-            case .lapsTime:
-                if let most = allSets.max(by: { $0.laps < $1.laps }) {
-                    PRRow(label: "Most Laps", value: "\(most.laps) laps")
-                }
-            case .duration:
-                if let longest = allSets.max(by: { $0.durationSeconds < $1.durationSeconds }) {
-                    PRRow(label: "Longest Session", value: longest.formattedDuration)
-                }
-            case .custom:
-                if let best = allSets.max(by: { $0.customValue < $1.customValue }) {
-                    PRRow(label: "Best", value: String(format: "%.1f %@", best.customValue, best.customLabel ?? ""))
-                }
+            ForEach(records) { record in
+                PRRow(label: record.label, value: record.value)
             }
         }
         .padding(16)
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16))
         } // end else
-    }
-
-    // MARK: Helpers
-
-    struct ChartPoint {
-        let date: Date
-        let value: Double
-    }
-
-    private func chartData(for activity: CDActivity) -> [ChartPoint] {
-        activity.sortedEntries
-            .filter { entry in
-                guard let date = entry.workout?.date else { return false }
-                if let cutoff = cutoffDate { return date >= cutoff }
-                return true
-            }
-            .compactMap { entry -> ChartPoint? in
-                guard let date = entry.workout?.date, let set = entry.bestSet else { return nil }
-                return ChartPoint(date: date, value: activity.metric.chartValue(from: set))
-            }
-            .sorted { $0.date < $1.date }
-    }
-
-    private func allSetsForActivity(_ activity: CDActivity) -> [CDEntrySet] {
-        activity.sortedEntries.flatMap { $0.sortedSets }
     }
 
     private func emptyChartPlaceholder(message: String) -> some View {

@@ -1,6 +1,17 @@
 import Foundation
 import HealthKit
 
+private enum HealthKitServiceError: LocalizedError {
+    case failedToFinishWorkout
+
+    var errorDescription: String? {
+        switch self {
+        case .failedToFinishWorkout:
+            return "HealthKit did not return a workout after finishing the builder."
+        }
+    }
+}
+
 enum HealthKitAuthorizationScope: Equatable {
     case workoutsWrite
     case bodyWeightWrite
@@ -65,17 +76,20 @@ final class LiveHealthKitService: HealthKitServiceProtocol {
     }
 
     func saveWorkout(_ payload: HealthKitWorkoutPayload) async throws -> HealthKitWorkoutSyncResult {
-        let workout = HKWorkout(
-            activityType: payload.activityType,
-            start: payload.startDate,
-            end: payload.endDate,
-            duration: payload.endDate.timeIntervalSince(payload.startDate),
-            totalEnergyBurned: nil,
-            totalDistance: nil,
-            metadata: workoutMetadata(for: payload)
+        let configuration = HKWorkoutConfiguration()
+        configuration.activityType = payload.activityType
+
+        let builder = HKWorkoutBuilder(
+            healthStore: store,
+            configuration: configuration,
+            device: nil
         )
 
-        try await store.save(workout)
+        try await beginCollection(for: builder, at: payload.startDate)
+        try await addMetadata(workoutMetadata(for: payload), to: builder)
+        try await endCollection(for: builder, at: payload.endDate)
+        let workout = try await finishWorkout(using: builder)
+
         return HealthKitWorkoutSyncResult(workoutUUID: workout.uuid)
     }
 
@@ -158,6 +172,64 @@ final class LiveHealthKitService: HealthKitServiceProtocol {
             metadata["GymTrackerWorkoutNotes"] = notes
         }
         return metadata
+    }
+
+    private func beginCollection(for builder: HKWorkoutBuilder, at startDate: Date) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            builder.beginCollection(withStart: startDate) { success, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if success {
+                    continuation.resume()
+                } else {
+                    continuation.resume(throwing: HealthKitServiceError.failedToFinishWorkout)
+                }
+            }
+        }
+    }
+
+    private func addMetadata(_ metadata: [String: Any], to builder: HKWorkoutBuilder) async throws {
+        guard !metadata.isEmpty else { return }
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            builder.addMetadata(metadata) { success, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if success {
+                    continuation.resume()
+                } else {
+                    continuation.resume(throwing: HealthKitServiceError.failedToFinishWorkout)
+                }
+            }
+        }
+    }
+
+    private func endCollection(for builder: HKWorkoutBuilder, at endDate: Date) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            builder.endCollection(withEnd: endDate) { success, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if success {
+                    continuation.resume()
+                } else {
+                    continuation.resume(throwing: HealthKitServiceError.failedToFinishWorkout)
+                }
+            }
+        }
+    }
+
+    private func finishWorkout(using builder: HKWorkoutBuilder) async throws -> HKWorkout {
+        try await withCheckedThrowingContinuation { continuation in
+            builder.finishWorkout { workout, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if let workout {
+                    continuation.resume(returning: workout)
+                } else {
+                    continuation.resume(throwing: HealthKitServiceError.failedToFinishWorkout)
+                }
+            }
+        }
     }
 
     private func querySamples(

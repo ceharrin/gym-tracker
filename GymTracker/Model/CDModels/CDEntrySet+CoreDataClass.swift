@@ -11,7 +11,6 @@ public class CDEntrySet: NSManagedObject {
     @NSManaged public var distanceMeters: Double
     @NSManaged public var durationSeconds: Int32
     @NSManaged public var id: UUID?
-    @NSManaged public var isWarmup: Bool
     @NSManaged public var laps: Int32
     @NSManaged public var notes: String?
     @NSManaged public var reps: Int32

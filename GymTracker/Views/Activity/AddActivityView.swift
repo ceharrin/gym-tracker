@@ -9,6 +9,7 @@ struct AddActivityView: View {
     @State private var metric: PrimaryMetric = .weightReps
     @State private var muscleGroups: String = ""
     @State private var instructions: String = ""
+    @State private var persistenceAlert: PersistenceAlertState? = nil
 
     var body: some View {
         NavigationStack {
@@ -66,6 +67,7 @@ struct AddActivityView: View {
                         .disabled(name.isEmpty)
                 }
             }
+            .persistenceErrorAlert($persistenceAlert)
         }
     }
 
@@ -80,7 +82,12 @@ struct AddActivityView: View {
         activity.instructions = instructions.isEmpty ? nil : instructions
         activity.isPreset = false
         activity.createdAt = Date()
-        try? context.save()
-        dismiss()
+        do {
+            try context.saveIfChanged()
+            dismiss()
+        } catch {
+            context.rollback()
+            persistenceAlert = PersistenceAlertState(title: "Couldn't Save Activity", error: error)
+        }
     }
 }
