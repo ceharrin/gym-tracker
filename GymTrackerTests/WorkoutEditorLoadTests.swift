@@ -216,6 +216,39 @@ final class WorkoutEditorLoadTests: XCTestCase {
         XCTAssertTrue(loaded.entries.isEmpty)
     }
 
+    // MARK: - isPRAttempt round-trip
+
+    func test_load_isPRAttempt_trueRoundTrips() throws {
+        let a = makeActivity()
+        var set = liveSet(weightKg: "100", reps: "5")
+        set.isPRAttempt = true
+        let loaded = try saveAndLoad(entries: [(a, [set])])
+        XCTAssertTrue(loaded.entries.first?.sets.first?.isPRAttempt == true,
+                      "isPRAttempt=true must survive a save → load round-trip")
+    }
+
+    func test_load_isPRAttempt_falseRoundTrips() throws {
+        let a = makeActivity()
+        var set = liveSet(weightKg: "80", reps: "8")
+        set.isPRAttempt = false
+        let loaded = try saveAndLoad(entries: [(a, [set])])
+        XCTAssertFalse(loaded.entries.first?.sets.first?.isPRAttempt == true,
+                       "isPRAttempt=false must survive a save → load round-trip")
+    }
+
+    func test_load_isPRAttempt_preservedAcrossMultipleSets() throws {
+        let a = makeActivity()
+        var s1 = liveSet(weightKg: "80", reps: "8"); s1.isPRAttempt = false
+        var s2 = liveSet(weightKg: "90", reps: "5"); s2.isPRAttempt = true
+        var s3 = liveSet(weightKg: "85", reps: "6"); s3.isPRAttempt = false
+        let loaded = try saveAndLoad(entries: [(a, [s1, s2, s3])])
+        let sets = loaded.entries.first?.sets ?? []
+        XCTAssertEqual(sets.count, 3)
+        XCTAssertFalse(sets[0].isPRAttempt)
+        XCTAssertTrue(sets[1].isPRAttempt)
+        XCTAssertFalse(sets[2].isPRAttempt)
+    }
+
     // MARK: - Imperial unit round-trip
 
     func test_load_weightKg_imperial_roundTrip() throws {

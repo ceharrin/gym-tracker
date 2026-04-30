@@ -114,8 +114,9 @@ enum WorkoutEditor {
                 }
                 s.laps        = set.laps > 0        ? "\(set.laps)"                            : ""
                 s.customValue = set.customValue > 0 ? String(format: "%.1f", set.customValue) : ""
-                s.customLabel = set.customLabel ?? ""
-                s.notes       = set.notes ?? ""
+                s.customLabel  = set.customLabel ?? ""
+                s.notes        = set.notes ?? ""
+                s.isPRAttempt  = set.isPRAttempt
                 return s
             }
             return mapped.isEmpty ? [LiveSet()] : mapped
@@ -200,6 +201,7 @@ enum WorkoutEditor {
                 set.customValue = Double(liveSet.customValue) ?? 0
                 set.customLabel = liveSet.customLabel.isEmpty ? nil : liveSet.customLabel
                 set.notes = liveSet.notes.isEmpty ? nil : liveSet.notes
+                set.isPRAttempt = liveSet.isPRAttempt
                 set.entry = entry
             }
         }

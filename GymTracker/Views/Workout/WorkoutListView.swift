@@ -109,16 +109,34 @@ enum WorkoutSummaryRowStyle {
     case list
 }
 
+enum WorkoutNavigationMode: Equatable {
+    case detail
+    case editInProgress
+
+    static func initialMode(for workout: CDWorkout) -> WorkoutNavigationMode {
+        workout.isCompleted ? .detail : .editInProgress
+    }
+}
+
 struct WorkoutNavigationDestination: View {
     @ObservedObject var workout: CDWorkout
+    let mode: WorkoutNavigationMode
+
+    init(workout: CDWorkout) {
+        self.workout = workout
+        self.mode = WorkoutNavigationMode.initialMode(for: workout)
+    }
 
     var body: some View {
         if !workout.canRenderInUI {
             Color.clear
-        } else if workout.isCompleted {
-            WorkoutDetailView(workout: workout)
         } else {
-            LogWorkoutView(workout: workout)
+            switch mode {
+            case .detail:
+                WorkoutDetailView(workout: workout)
+            case .editInProgress:
+                LogWorkoutView(workout: workout)
+            }
         }
     }
 }
@@ -152,6 +170,13 @@ struct WorkoutSummaryRow: View {
                     Spacer()
 
                     VStack(alignment: .trailing, spacing: 2) {
+                        if workout.hasPersonalBest {
+                            Label("Personal Best", systemImage: "trophy.fill")
+                                .font(.caption2)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(.yellow)
+                                .labelStyle(.iconOnly)
+                        }
                         Text(workout.formattedDate)
                             .font(.caption)
                             .foregroundStyle(.secondary)

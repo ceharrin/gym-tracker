@@ -160,4 +160,48 @@ final class CDWorkoutTests: XCTestCase {
 
         XCTAssertFalse(w.canRenderInUI)
     }
+
+    // MARK: - hasPersonalBest
+
+    func test_hasPersonalBest_falseWhenNoEntries() {
+        let w = makeWorkout()
+        XCTAssertFalse(w.hasPersonalBest)
+    }
+
+    func test_hasPersonalBest_falseWhenNoPRSetsMarked() {
+        let w = makeWorkout()
+        let e = makeEntry(workout: w, activity: makeActivity(name: "Squat"))
+        let s = CDEntrySet(context: context)
+        s.id = UUID(); s.setNumber = 1; s.isPRAttempt = false; s.entry = e
+        XCTAssertFalse(w.hasPersonalBest)
+    }
+
+    func test_hasPersonalBest_trueWhenOnePRSetMarked() {
+        let w = makeWorkout()
+        let e = makeEntry(workout: w, activity: makeActivity(name: "Squat"))
+        let s = CDEntrySet(context: context)
+        s.id = UUID(); s.setNumber = 1; s.isPRAttempt = true; s.entry = e
+        XCTAssertTrue(w.hasPersonalBest)
+    }
+
+    func test_hasPersonalBest_trueWhenOnlyOneOfManySetsMarked() {
+        let w = makeWorkout()
+        let e = makeEntry(workout: w, activity: makeActivity(name: "Deadlift"))
+        for i in 1...3 {
+            let s = CDEntrySet(context: context)
+            s.id = UUID(); s.setNumber = Int16(i); s.isPRAttempt = (i == 2); s.entry = e
+        }
+        XCTAssertTrue(w.hasPersonalBest)
+    }
+
+    func test_hasPersonalBest_trueWhenPRIsInSecondEntry() {
+        let w = makeWorkout()
+        let e1 = makeEntry(workout: w, activity: makeActivity(name: "Squat"), orderIndex: 0)
+        let e2 = makeEntry(workout: w, activity: makeActivity(name: "Bench Press"), orderIndex: 1)
+        let s1 = CDEntrySet(context: context)
+        s1.id = UUID(); s1.setNumber = 1; s1.isPRAttempt = false; s1.entry = e1
+        let s2 = CDEntrySet(context: context)
+        s2.id = UUID(); s2.setNumber = 1; s2.isPRAttempt = true; s2.entry = e2
+        XCTAssertTrue(w.hasPersonalBest)
+    }
 }

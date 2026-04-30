@@ -197,6 +197,41 @@ final class WorkoutSaveTests: XCTestCase {
         XCTAssertEqual(workout.durationMinutes, 40, "Editing a completed workout later should not recalculate duration from the current clock")
     }
 
+    func test_completingPreviouslySavedProgressStillReturnsPersonalRecordNames() throws {
+        let activity = makeActivity(name: "Bench Press")
+        let historical = try saveNew(
+            title: "Old Bench",
+            entries: [(activity, [liveSet(weightKg: "80", reps: "5")], "")]
+        )
+        XCTAssertTrue(historical.isCompleted)
+
+        var prSet = liveSet(weightKg: "90", reps: "3")
+        prSet.isPRAttempt = true
+
+        let start = Date(timeIntervalSinceReferenceDate: 5_000)
+        let progressSavedAt = start.addingTimeInterval(10 * 60)
+        let inProgress = try saveNew(
+            title: "Bench Day",
+            date: start,
+            entries: [(activity, [prSet], "")],
+            intent: .saveProgress,
+            completedAt: progressSavedAt
+        )
+
+        let result = try WorkoutEditor.save(
+            data: WorkoutEditor.load(from: inProgress),
+            context: context,
+            existingWorkout: inProgress,
+            isDuplicate: false,
+            startTime: inProgress.startedAt ?? start,
+            intent: .complete,
+            completedAt: start.addingTimeInterval(20 * 60)
+        )
+
+        XCTAssertEqual(result.newPRNames, ["Bench Press"])
+        XCTAssertTrue(result.savedWorkout.isCompleted)
+    }
+
     func test_save_workout_storesEnergyLevel() throws {
         let w = try saveNew(title: "Test", energyLevel: 9)
         XCTAssertEqual(w.energyLevel, 9)

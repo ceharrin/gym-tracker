@@ -43,6 +43,13 @@ extension CDWorkout {
         isCompleted ? nil : "In Progress"
     }
 
+    /// True if any set in this workout was flagged as a PR attempt.
+    var hasPersonalBest: Bool {
+        sortedEntries.contains { entry in
+            entry.sortedSets.contains { $0.isPRAttempt }
+        }
+    }
+
     /// SF Symbol name for the first activity's category (or a fallback dumbbell).
     var primaryCategoryIcon: String {
         sortedEntries.first?.activity?.activityCategory.icon ?? "dumbbell.fill"

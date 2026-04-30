@@ -116,6 +116,34 @@ final class WorkoutBugTests: XCTestCase {
         _ = prSet
     }
 
+    func test_isPRAttempt_persistedThroughWorkoutEditorSave() throws {
+        let activity = makeActivity()
+        var liveSet = LiveSet()
+        liveSet.weightKg = "100"
+        liveSet.reps = "5"
+        liveSet.isPRAttempt = true
+
+        let data = WorkoutEditor.WorkoutData(
+            title: "Test",
+            date: Date(),
+            energyLevel: 7,
+            notes: "",
+            entries: [LiveEntry(activity: activity, sets: [liveSet])]
+        )
+
+        let result = try WorkoutEditor.save(
+            data: data,
+            context: context,
+            existingWorkout: nil,
+            isDuplicate: false,
+            startTime: Date(),
+            intent: .complete
+        )
+
+        let savedSet = try XCTUnwrap(result.savedWorkout.sortedEntries.first?.sortedSets.first)
+        XCTAssertTrue(savedSet.isPRAttempt, "isPRAttempt must be persisted through WorkoutEditor.save()")
+    }
+
     // MARK: - Workout deletion
 
     func test_deleteWorkout_removesItFromContext() throws {
