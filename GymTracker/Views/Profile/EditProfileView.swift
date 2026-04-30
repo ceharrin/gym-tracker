@@ -147,7 +147,6 @@ struct EditProfileView: View {
 
     private func save() {
         let p = profile ?? CDUserProfile(context: context)
-        var createdMeasurement: CDBodyMeasurement?
         if profile == nil {
             p.createdAt = Date()
         }
@@ -170,11 +169,8 @@ struct EditProfileView: View {
                 let m = CDBodyMeasurement(context: context)
                 m.id = UUID()
                 m.date = Date()
-                m.healthDataSource = .local
-                m.healthKitSyncState = .notSynced
                 m.weightKg = newKg
                 m.profile = p
-                createdMeasurement = m
             }
         }
         if let data = pendingPhotoData {
@@ -182,9 +178,6 @@ struct EditProfileView: View {
         }
         do {
             try context.saveIfChanged()
-            if let createdMeasurement {
-                Task { await WorkoutHealthKitManager.shared.syncBodyMeasurement(createdMeasurement) }
-            }
             dismiss()
         } catch {
             saveError = error.localizedDescription
@@ -254,15 +247,12 @@ struct AddMeasurementView: View {
         let m = CDBodyMeasurement(context: context)
         m.id = UUID()
         m.date = date
-        m.healthDataSource = .local
-        m.healthKitSyncState = .notSynced
         m.weightKg = Units.kgFromInput(inputVal)
         m.bodyFatPercent = Double(bodyFatPercent) ?? 0
         m.notes = notes.isEmpty ? nil : notes
         m.profile = profile
         do {
             try context.saveIfChanged()
-            Task { await WorkoutHealthKitManager.shared.syncBodyMeasurement(m) }
             dismiss()
         } catch {
             saveError = error.localizedDescription

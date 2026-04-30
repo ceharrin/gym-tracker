@@ -141,11 +141,6 @@ struct LogWorkoutView: View {
             return
         }
 
-        let isNew = existingWorkout == nil || isDuplicate
-        Task {
-            await WorkoutHealthKitManager.shared.syncWorkout(result.savedWorkout, isNew: isNew)
-        }
-
         if result.newPRNames.isEmpty {
             dismiss()
         } else {

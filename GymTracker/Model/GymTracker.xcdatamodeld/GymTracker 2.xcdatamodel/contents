@@ -15,9 +15,6 @@
     <entity name="CDBodyMeasurement" representedClassName="CDBodyMeasurement" syncable="YES">
         <attribute name="bodyFatPercent" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
         <attribute name="date" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="healthKitSampleUUID" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
-        <attribute name="healthKitSourceRaw" attributeType="String" defaultValueString="local"/>
-        <attribute name="healthKitSyncStateRaw" attributeType="String" defaultValueString="not_synced"/>
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="notes" optional="YES" attributeType="String"/>
         <attribute name="weightKg" attributeType="Double" defaultValueString="0.0" usesScalarValueType="YES"/>
@@ -50,10 +47,6 @@
         <attribute name="date" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
         <attribute name="durationMinutes" attributeType="Integer 32" defaultValueString="0" usesScalarValueType="YES"/>
         <attribute name="energyLevel" attributeType="Integer 16" defaultValueString="5" usesScalarValueType="YES"/>
-        <attribute name="healthKitLastError" optional="YES" attributeType="String"/>
-        <attribute name="healthKitLastSyncAt" optional="YES" attributeType="Date" usesScalarValueType="NO"/>
-        <attribute name="healthKitSyncStateRaw" attributeType="String" defaultValueString="not_synced"/>
-        <attribute name="healthKitWorkoutUUID" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="id" optional="YES" attributeType="UUID" usesScalarValueType="NO"/>
         <attribute name="notes" optional="YES" attributeType="String"/>
         <attribute name="title" attributeType="String" defaultValueString=""/>

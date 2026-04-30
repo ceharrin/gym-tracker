@@ -27,8 +27,6 @@ targets:
     deploymentTarget: "18.0"
     sources:
       - path: GymTracker
-    dependencies:
-      - sdk: HealthKit.framework
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.chrisharrington.GymTracker

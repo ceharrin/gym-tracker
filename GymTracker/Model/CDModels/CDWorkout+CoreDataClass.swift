@@ -9,10 +9,6 @@ public class CDWorkout: NSManagedObject {
     @NSManaged public var date: Date
     @NSManaged public var durationMinutes: Int32
     @NSManaged public var energyLevel: Int16
-    @NSManaged public var healthKitLastError: String?
-    @NSManaged public var healthKitLastSyncAt: Date?
-    @NSManaged public var healthKitSyncStateRaw: String
-    @NSManaged public var healthKitWorkoutUUID: UUID?
     @NSManaged public var id: UUID?
     @NSManaged public var notes: String?
     @NSManaged public var title: String

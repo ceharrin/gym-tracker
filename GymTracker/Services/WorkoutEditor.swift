@@ -139,7 +139,6 @@ enum WorkoutEditor {
         } else {
             workout = CDWorkout(context: context)
             workout.id = UUID()
-            workout.healthKitSyncState = .notSynced
         }
 
         workout.date = data.date
@@ -147,10 +146,6 @@ enum WorkoutEditor {
         workout.durationMinutes = Int32(data.durationMinutes) ??
             (existingWorkout == nil ? Int32(Date().timeIntervalSince(startTime) / 60) : workout.durationMinutes)
         workout.energyLevel = Int16(data.energyLevel)
-        workout.healthKitLastError = nil
-        if workout.healthKitWorkoutUUID == nil, workout.healthKitSyncState == .failed {
-            workout.healthKitSyncState = .notSynced
-        }
         workout.notes = data.notes.isEmpty ? nil : data.notes
 
         for (idx, liveEntry) in data.entries.enumerated() {
