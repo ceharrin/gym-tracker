@@ -74,6 +74,32 @@ final class CDWorkoutHelpersExtendedTests: XCTestCase {
         XCTAssertNotEqual(w1.formattedDate, w2.formattedDate)
     }
 
+    // MARK: - formattedDuration
+
+    func test_formattedDuration_completedWorkoutWithPositiveDuration() {
+        let w = makeWorkout()
+        w.isCompleted = true
+        w.durationMinutes = 45
+
+        XCTAssertEqual(w.formattedDuration, "45 min")
+    }
+
+    func test_formattedDuration_completedWorkoutWithZeroDuration() {
+        let w = makeWorkout()
+        w.isCompleted = true
+        w.durationMinutes = 0
+
+        XCTAssertEqual(w.formattedDuration, "0 min")
+    }
+
+    func test_formattedDuration_inProgressWorkoutWithZeroDuration() {
+        let w = makeWorkout()
+        w.isCompleted = false
+        w.durationMinutes = 0
+
+        XCTAssertNil(w.formattedDuration)
+    }
+
     // MARK: - primaryCategoryIcon
 
     func test_primaryCategoryIcon_noEntries_returnsDumbbell() {

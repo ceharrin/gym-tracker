@@ -36,21 +36,25 @@ final class WorkoutEditorLoadTests: XCTestCase {
     private func saveAndLoad(
         title: String = "Test",
         date: Date = Date(),
-        durationMinutes: String = "45",
         energyLevel: Int = 7,
         notes: String = "",
-        entries: [(CDActivity, [LiveSet])] = []
+        entries: [(CDActivity, [LiveSet])] = [],
+        completedAt: Date? = nil
     ) throws -> WorkoutEditor.WorkoutData {
         let data = WorkoutEditor.WorkoutData(
             title: title,
             date: date,
-            durationMinutes: durationMinutes,
             energyLevel: energyLevel,
             notes: notes,
             entries: entries.map { LiveEntry(activity: $0.0, sets: $0.1) }
         )
         let result = try WorkoutEditor.save(
-            data: data, context: context, existingWorkout: nil, isDuplicate: false, startTime: date
+            data: data,
+            context: context,
+            existingWorkout: nil,
+            isDuplicate: false,
+            startTime: date,
+            completedAt: completedAt ?? date
         )
         return WorkoutEditor.load(from: result.savedWorkout)
     }
@@ -91,12 +95,13 @@ final class WorkoutEditorLoadTests: XCTestCase {
     }
 
     func test_load_durationMinutes() throws {
-        let loaded = try saveAndLoad(durationMinutes: "60")
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        let loaded = try saveAndLoad(date: start, completedAt: start.addingTimeInterval(60 * 60))
         XCTAssertEqual(loaded.durationMinutes, "60")
     }
 
     func test_load_durationMinutes_zeroReturnedAsEmpty() throws {
-        let loaded = try saveAndLoad(durationMinutes: "0")
+        let loaded = try saveAndLoad()
         XCTAssertEqual(loaded.durationMinutes, "",
                        "Zero durationMinutes must be loaded as empty string")
     }

@@ -15,6 +15,7 @@ extension CDWorkoutEntry {
         case .distanceTime: return s.max { $0.distanceMeters < $1.distanceMeters }
         case .lapsTime:     return s.max { $0.laps < $1.laps }
         case .duration:     return s.max { $0.durationSeconds < $1.durationSeconds }
+        case .reps:         return s.max { $0.reps < $1.reps }
         default:            return s.first
         }
     }

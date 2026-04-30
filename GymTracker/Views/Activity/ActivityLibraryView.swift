@@ -12,6 +12,7 @@ struct ActivityLibraryView: View {
     @State private var searchText = ""
     @State private var selectedCategory: ActivityCategory? = nil
     @State private var showingAdd = false
+    @State private var selectedActivityForEdit: CDActivity? = nil
     @State private var persistenceAlert: PersistenceAlertState? = nil
 
     private var filtered: [CDActivity] {
@@ -47,7 +48,12 @@ struct ActivityLibraryView: View {
                                 ActivityLibraryRow(activity: activity)
                             }
                             ForEach(custom) { activity in
-                                ActivityLibraryRow(activity: activity)
+                                Button {
+                                    selectedActivityForEdit = activity
+                                } label: {
+                                    ActivityLibraryRow(activity: activity, isEditable: true)
+                                }
+                                .buttonStyle(.plain)
                             }
                             .onDelete { deleteItems(from: custom, offsets: $0) }
                         } header: {
@@ -76,6 +82,9 @@ struct ActivityLibraryView: View {
             .sheet(isPresented: $showingAdd) {
                 AddActivityView()
             }
+            .sheet(item: $selectedActivityForEdit) { activity in
+                AddActivityView(activity: activity)
+            }
             .persistenceErrorAlert($persistenceAlert)
         }
     }
@@ -100,9 +109,12 @@ struct ActivityLibraryView: View {
     }
 
     private func deleteItems(from items: [CDActivity], offsets: IndexSet) {
-        for idx in offsets {
-            let activity = items[idx]
-            guard !activity.isPreset else { continue }
+        let selected = offsets.map { items[$0] }
+        if selected.contains(where: \.isPreset) {
+            persistenceAlert = PersistenceAlertState(title: "Couldn't Delete Activity", error: ActivityEditorError.presetActivitiesCannotBeModified)
+            return
+        }
+        for activity in selected {
             context.delete(activity)
         }
         do {
@@ -116,6 +128,7 @@ struct ActivityLibraryView: View {
 
 struct ActivityLibraryRow: View {
     let activity: CDActivity
+    var isEditable: Bool = false
 
     var body: some View {
         HStack(spacing: 12) {
@@ -155,6 +168,12 @@ struct ActivityLibraryRow: View {
             Text(activity.metric.displayName)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+
+            if isEditable {
+                Image(systemName: "chevron.right")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
         }
     }
 }

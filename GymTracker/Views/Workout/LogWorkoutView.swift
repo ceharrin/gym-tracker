@@ -17,7 +17,6 @@ struct LogWorkoutView: View {
     @State private var entries: [LiveEntry] = []
     @State private var notes: String = ""
     @State private var energyLevel: Int = 7
-    @State private var durationMinutes: String = ""
     @State private var workoutDate: Date = Date()
     @State private var showingPicker = false
     @State private var startTime: Date = Date()
@@ -32,7 +31,8 @@ struct LogWorkoutView: View {
                     WorkoutMetaSection(
                         title: $title,
                         workoutDate: $workoutDate,
-                        durationMinutes: $durationMinutes
+                        durationText: durationText,
+                        statusText: workoutStatusText
                     )
                         .listRowInsets(EdgeInsets())
                         .listRowSeparator(.hidden)
@@ -75,14 +75,32 @@ struct LogWorkoutView: View {
                     .buttonStyle(.plain)
 
                     if !entries.isEmpty {
-                        Button(action: save) {
-                            Text("Complete Workout")
-                                .font(.headline)
-                                .frame(maxWidth: .infinity)
-                                .padding(16)
-                                .background(Color.accentColor)
-                                .foregroundStyle(.white)
-                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                        HStack(spacing: 10) {
+                            if showsSaveProgressButton {
+                                Button {
+                                    save(intent: .saveProgress)
+                                } label: {
+                                    Text("Save Progress")
+                                        .font(.headline)
+                                        .frame(maxWidth: .infinity)
+                                        .padding(16)
+                                        .background(Color(.secondarySystemBackground))
+                                        .foregroundStyle(Color.accentColor)
+                                        .clipShape(RoundedRectangle(cornerRadius: 16))
+                                }
+                            }
+
+                            Button {
+                                save(intent: .complete)
+                            } label: {
+                                Text(primarySaveButtonTitle)
+                                    .font(.headline)
+                                    .frame(maxWidth: .infinity)
+                                    .padding(16)
+                                    .background(Color.accentColor)
+                                    .foregroundStyle(.white)
+                                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                            }
                         }
                     }
                 }
@@ -117,11 +135,11 @@ struct LogWorkoutView: View {
 
     // MARK: Save
 
-    private func save() {
+    private func save(intent: WorkoutEditor.SaveIntent) {
+        let completedAt = Date()
         let data = WorkoutEditor.WorkoutData(
             title: title,
             date: workoutDate,
-            durationMinutes: durationMinutes,
             energyLevel: energyLevel,
             notes: notes,
             entries: entries
@@ -133,7 +151,9 @@ struct LogWorkoutView: View {
                 context: context,
                 existingWorkout: existingWorkout,
                 isDuplicate: isDuplicate,
-                startTime: startTime
+                startTime: startTime,
+                intent: intent,
+                completedAt: completedAt
             )
         } catch {
             context.rollback()
@@ -141,7 +161,7 @@ struct LogWorkoutView: View {
             return
         }
 
-        if result.newPRNames.isEmpty {
+        if intent == .saveProgress || result.newPRNames.isEmpty {
             dismiss()
         } else {
             confirmedPRs = result.newPRNames
@@ -161,11 +181,40 @@ struct LogWorkoutView: View {
             isDuplicate: isDuplicate,
             now: now
         )
+        startTime = resolvedStartTime(now: now)
         title = initialData.title
         workoutDate = initialData.date
-        durationMinutes = initialData.durationMinutes
         energyLevel = initialData.energyLevel
         notes = initialData.notes
         entries = initialData.entries
+    }
+
+    private var durationText: String {
+        if let existingWorkout, existingWorkout.isCompleted, !isDuplicate {
+            return existingWorkout.durationMinutes > 0 ? "\(existingWorkout.durationMinutes) min" : "0 min"
+        }
+        let elapsed = max(0, Int(Date().timeIntervalSince(startTime) / 60))
+        return "\(elapsed) min"
+    }
+
+    private var workoutStatusText: String? {
+        if let existingWorkout, !existingWorkout.isCompleted, !isDuplicate {
+            return "Workout in progress"
+        }
+        return nil
+    }
+
+    private func resolvedStartTime(now: Date) -> Date {
+        guard let existingWorkout else { return now }
+        if isDuplicate { return now }
+        return existingWorkout.startedAt ?? now
+    }
+
+    private var showsSaveProgressButton: Bool {
+        existingWorkout?.isCompleted != true || isDuplicate
+    }
+
+    private var primarySaveButtonTitle: String {
+        existingWorkout?.isCompleted == true && !isDuplicate ? "Save Changes" : "Complete Workout"
     }
 }

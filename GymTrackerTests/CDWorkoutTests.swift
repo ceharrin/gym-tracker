@@ -18,7 +18,9 @@ final class CDWorkoutTests: XCTestCase {
         w.id = UUID()
         w.title = title
         w.date = Date()
+        w.startedAt = w.date
         w.durationMinutes = durationMinutes
+        w.isCompleted = true
         w.energyLevel = 7
         return w
     }
@@ -125,5 +127,37 @@ final class CDWorkoutTests: XCTestCase {
     func test_totalSets_zeroWhenNoEntries() {
         let w = makeWorkout()
         XCTAssertEqual(w.totalSets, 0)
+    }
+
+    // MARK: - statusLabel
+
+    func test_statusLabel_showsInProgressForUnfinishedWorkout() {
+        let w = makeWorkout()
+        w.isCompleted = false
+
+        XCTAssertEqual(w.statusLabel, "In Progress")
+    }
+
+    func test_statusLabel_clearsWhenWorkoutCompletes() {
+        let w = makeWorkout()
+        w.isCompleted = false
+        XCTAssertEqual(w.statusLabel, "In Progress")
+
+        w.isCompleted = true
+
+        XCTAssertNil(w.statusLabel)
+    }
+
+    func test_canRenderInUI_trueForActiveWorkout() {
+        let w = makeWorkout()
+
+        XCTAssertTrue(w.canRenderInUI)
+    }
+
+    func test_canRenderInUI_falseForDeletedWorkout() {
+        let w = makeWorkout()
+        context.delete(w)
+
+        XCTAssertFalse(w.canRenderInUI)
     }
 }

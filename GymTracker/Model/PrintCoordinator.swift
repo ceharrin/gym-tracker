@@ -18,6 +18,21 @@ enum PrintCoordinator {
     /// Uses UIMarkupTextPrintFormatter (WebKit) — must be called on the main thread.
     /// Returns nil if rendering produces no pages or writing fails.
     static func htmlToPDF(_ html: String, filename: String) -> URL? {
+        guard let pdfData = htmlToPDFData(html) else { return nil }
+
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
+        do {
+            try pdfData.write(to: url)
+            return url
+        } catch {
+            return nil
+        }
+    }
+
+    /// Renders HTML to PDF data suitable for either saving or sharing.
+    /// Uses UIMarkupTextPrintFormatter (WebKit) — must be called on the main thread.
+    /// Returns nil if rendering produces no pages.
+    static func htmlToPDFData(_ html: String) -> Data? {
         let formatter = UIMarkupTextPrintFormatter(markupText: html)
 
         let renderer = UIPrintPageRenderer()
@@ -38,13 +53,6 @@ enum PrintCoordinator {
         UIGraphicsEndPDFContext()
 
         guard pdfData.length > 0 else { return nil }
-
-        let url = FileManager.default.temporaryDirectory.appendingPathComponent(filename)
-        do {
-            try (pdfData as Data).write(to: url)
-            return url
-        } catch {
-            return nil
-        }
+        return pdfData as Data
     }
 }

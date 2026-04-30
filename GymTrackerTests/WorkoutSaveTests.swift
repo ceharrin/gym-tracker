@@ -60,21 +60,27 @@ final class WorkoutSaveTests: XCTestCase {
     private func saveNew(
         title: String = "Test",
         date: Date = Date(),
-        durationMinutes: String = "",
         energyLevel: Int = 7,
         notes: String = "",
-        entries: [(CDActivity, [LiveSet], String)] = []
+        entries: [(CDActivity, [LiveSet], String)] = [],
+        intent: WorkoutEditor.SaveIntent = .complete,
+        completedAt: Date? = nil
     ) throws -> CDWorkout {
         let data = WorkoutEditor.WorkoutData(
             title: title,
             date: date,
-            durationMinutes: durationMinutes,
             energyLevel: energyLevel,
             notes: notes,
             entries: entries.map { LiveEntry(activity: $0.0, sets: $0.1, notes: $0.2) }
         )
         return try WorkoutEditor.save(
-            data: data, context: context, existingWorkout: nil, isDuplicate: false, startTime: date
+            data: data,
+            context: context,
+            existingWorkout: nil,
+            isDuplicate: false,
+            startTime: date,
+            intent: intent,
+            completedAt: completedAt ?? date
         ).savedWorkout
     }
 
@@ -83,21 +89,27 @@ final class WorkoutSaveTests: XCTestCase {
         existing: CDWorkout,
         title: String = "Test",
         date: Date = Date(),
-        durationMinutes: String = "",
         energyLevel: Int = 7,
         notes: String = "",
-        entries: [(CDActivity, [LiveSet], String)] = []
+        entries: [(CDActivity, [LiveSet], String)] = [],
+        intent: WorkoutEditor.SaveIntent = .complete,
+        completedAt: Date? = nil
     ) throws {
         let data = WorkoutEditor.WorkoutData(
             title: title,
             date: date,
-            durationMinutes: durationMinutes,
             energyLevel: energyLevel,
             notes: notes,
             entries: entries.map { LiveEntry(activity: $0.0, sets: $0.1, notes: $0.2) }
         )
         try WorkoutEditor.save(
-            data: data, context: context, existingWorkout: existing, isDuplicate: false, startTime: date
+            data: data,
+            context: context,
+            existingWorkout: existing,
+            isDuplicate: false,
+            startTime: date,
+            intent: intent,
+            completedAt: completedAt ?? date
         )
     }
 
@@ -113,9 +125,76 @@ final class WorkoutSaveTests: XCTestCase {
         XCTAssertEqual(w.title, "Workout")
     }
 
-    func test_save_workout_storesDuration() throws {
-        let w = try saveNew(title: "Test", durationMinutes: "45")
+    func test_save_workout_storesCalculatedDurationFromStartAndCompletionTimes() throws {
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        let completedAt = start.addingTimeInterval(45 * 60)
+        let w = try saveNew(title: "Test", date: start, completedAt: completedAt)
         XCTAssertEqual(w.durationMinutes, 45)
+    }
+
+    func test_save_progress_marksWorkoutInProgress() throws {
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        let savedAt = start.addingTimeInterval(15 * 60)
+        let workout = try saveNew(
+            title: "Leg Day",
+            date: start,
+            intent: .saveProgress,
+            completedAt: savedAt
+        )
+
+        XCTAssertFalse(workout.isCompleted)
+        XCTAssertEqual(workout.startedAt, start)
+        XCTAssertEqual(workout.durationMinutes, 15)
+    }
+
+    func test_complete_workout_marksWorkoutCompleted() throws {
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        let completedAt = start.addingTimeInterval(32 * 60)
+        let workout = try saveNew(title: "Leg Day", date: start, completedAt: completedAt)
+
+        XCTAssertTrue(workout.isCompleted)
+        XCTAssertEqual(workout.startedAt, start)
+        XCTAssertEqual(workout.durationMinutes, 32)
+    }
+
+    func test_completingInProgressWorkoutUpdatesDurationFromOriginalStartTime() throws {
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        let progressSavedAt = start.addingTimeInterval(10 * 60)
+        let completedAt = start.addingTimeInterval(28 * 60)
+        let workout = try saveNew(
+            title: "Pull Day",
+            date: start,
+            intent: .saveProgress,
+            completedAt: progressSavedAt
+        )
+
+        try saveEdit(
+            existing: workout,
+            title: "Pull Day",
+            date: start,
+            intent: .complete,
+            completedAt: completedAt
+        )
+
+        XCTAssertTrue(workout.isCompleted)
+        XCTAssertEqual(workout.durationMinutes, 28)
+        XCTAssertEqual(workout.startedAt, start)
+    }
+
+    func test_editingCompletedWorkoutPreservesStoredDuration() throws {
+        let start = Date(timeIntervalSinceReferenceDate: 1_000)
+        let completedAt = start.addingTimeInterval(40 * 60)
+        let workout = try saveNew(title: "Upper", date: start, completedAt: completedAt)
+
+        try saveEdit(
+            existing: workout,
+            title: "Upper Updated",
+            date: start.addingTimeInterval(86_400),
+            intent: .complete,
+            completedAt: completedAt.addingTimeInterval(999)
+        )
+
+        XCTAssertEqual(workout.durationMinutes, 40, "Editing a completed workout later should not recalculate duration from the current clock")
     }
 
     func test_save_workout_storesEnergyLevel() throws {
@@ -309,11 +388,17 @@ final class WorkoutSaveTests: XCTestCase {
         let originalID = original.id
 
         let data = WorkoutEditor.WorkoutData(
-            title: "Push Day", date: Date(), durationMinutes: "", energyLevel: 7, notes: "",
+            title: "Push Day", date: Date(), energyLevel: 7, notes: "",
             entries: [LiveEntry(activity: a, sets: [liveSet(weightKg: "60", reps: "10")], notes: "")]
         )
         let duplicate = try WorkoutEditor.save(
-            data: data, context: context, existingWorkout: original, isDuplicate: true, startTime: Date()
+            data: data,
+            context: context,
+            existingWorkout: original,
+            isDuplicate: true,
+            startTime: Date(),
+            intent: .complete,
+            completedAt: Date()
         ).savedWorkout
 
         XCTAssertNotEqual(duplicate.id, originalID, "Duplicate must have a new UUID")
@@ -326,11 +411,17 @@ final class WorkoutSaveTests: XCTestCase {
         let originalEntryID = original.sortedEntries.first?.id
 
         let data = WorkoutEditor.WorkoutData(
-            title: "Push Day Copy", date: Date(), durationMinutes: "", energyLevel: 7, notes: "",
+            title: "Push Day Copy", date: Date(), energyLevel: 7, notes: "",
             entries: [LiveEntry(activity: a, sets: [liveSet(weightKg: "70", reps: "8")], notes: "")]
         )
         try WorkoutEditor.save(
-            data: data, context: context, existingWorkout: original, isDuplicate: true, startTime: Date()
+            data: data,
+            context: context,
+            existingWorkout: original,
+            isDuplicate: true,
+            startTime: Date(),
+            intent: .complete,
+            completedAt: Date()
         )
 
         XCTAssertEqual(original.sortedEntries.first?.id, originalEntryID)

@@ -8,7 +8,7 @@ struct WorkoutListView: View {
         animation: .default
     ) private var workouts: FetchedResults<CDWorkout>
 
-    @State private var showingLogWorkout = false
+    @State private var startDestination: WorkoutStartDestination? = nil
     @State private var showingPrintSummary = false
     @State private var searchText = ""
     @State private var persistenceAlert: PersistenceAlertState? = nil
@@ -39,7 +39,7 @@ struct WorkoutListView: View {
                             Section(month) {
                                 ForEach(items) { workout in
                                     NavigationLink {
-                                        WorkoutDetailView(workout: workout)
+                                        WorkoutNavigationDestination(workout: workout)
                                     } label: {
                                         WorkoutSummaryRow(workout: workout, style: .list)
                                     }
@@ -64,8 +64,12 @@ struct WorkoutListView: View {
                     }
                 }
             }
-            .sheet(isPresented: $showingLogWorkout) {
-                LogWorkoutView()
+            .sheet(item: $startDestination) { destination in
+                if let workout = destination.workout {
+                    LogWorkoutView(workout: workout)
+                } else {
+                    LogWorkoutView()
+                }
             }
             .sheet(isPresented: $showingPrintSummary) {
                 PrintSummaryView(allWorkouts: Array(workouts))
@@ -80,7 +84,9 @@ struct WorkoutListView: View {
         } description: {
             Text("Log your first workout to see it here.")
         } actions: {
-            Button("Start Workout") { showingLogWorkout = true }
+            Button("Start Workout") {
+                startDestination = WorkoutStartCoordinator.startDestination(from: Array(workouts))
+            }
                 .buttonStyle(.borderedProminent)
         }
     }
@@ -103,41 +109,65 @@ enum WorkoutSummaryRowStyle {
     case list
 }
 
+struct WorkoutNavigationDestination: View {
+    @ObservedObject var workout: CDWorkout
+
+    var body: some View {
+        if !workout.canRenderInUI {
+            Color.clear
+        } else if workout.isCompleted {
+            WorkoutDetailView(workout: workout)
+        } else {
+            LogWorkoutView(workout: workout)
+        }
+    }
+}
+
 struct WorkoutSummaryRow: View {
-    let workout: CDWorkout
+    @ObservedObject var workout: CDWorkout
     let style: WorkoutSummaryRowStyle
 
     var body: some View {
-        HStack(spacing: style == .card ? 14 : 12) {
-            iconBadge
+        Group {
+            if workout.canRenderInUI {
+                HStack(spacing: style == .card ? 14 : 12) {
+                    iconBadge
 
-            VStack(alignment: .leading, spacing: 2) {
-                Text(workout.title)
-                    .font(.subheadline)
-                    .fontWeight(style == .card ? .semibold : .medium)
-                Text(workout.activitySummary)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-            }
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(workout.title)
+                            .font(.subheadline)
+                            .fontWeight(style == .card ? .semibold : .medium)
+                        if let statusLabel = workout.statusLabel {
+                            Text(statusLabel)
+                                .font(.caption2)
+                                .fontWeight(.semibold)
+                                .foregroundStyle(Color.accentColor)
+                        }
+                        Text(workout.activitySummary)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
 
-            Spacer()
+                    Spacer()
 
-            VStack(alignment: .trailing, spacing: 2) {
-                Text(workout.formattedDate)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                if workout.durationMinutes > 0 {
-                    Text(durationText)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
+                    VStack(alignment: .trailing, spacing: 2) {
+                        Text(workout.formattedDate)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                        if let durationText = workout.formattedDuration {
+                            Text(compactDurationText(from: durationText))
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
                 }
+                .padding(style == .card ? 14 : 0)
+                .padding(.vertical, style == .list ? 2 : 0)
+                .background(style == .card ? Color(.secondarySystemBackground) : Color.clear)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
             }
         }
-        .padding(style == .card ? 14 : 0)
-        .padding(.vertical, style == .list ? 2 : 0)
-        .background(style == .card ? Color(.secondarySystemBackground) : Color.clear)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
     }
 
     @ViewBuilder
@@ -162,8 +192,10 @@ struct WorkoutSummaryRow: View {
         }
     }
 
-    private var durationText: String {
-        style == .card ? "\(workout.durationMinutes) min" : "\(workout.durationMinutes)m"
+    private func compactDurationText(from formattedDuration: String) -> String {
+        style == .card
+            ? formattedDuration
+            : formattedDuration.replacingOccurrences(of: " min", with: "m")
     }
 
     private var categoryIcon: String { workout.primaryCategoryIcon }

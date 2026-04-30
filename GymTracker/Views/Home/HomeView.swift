@@ -13,7 +13,7 @@ struct HomeView: View {
         animation: .default
     ) private var profiles: FetchedResults<CDUserProfile>
 
-    @State private var showingLogWorkout = false
+    @State private var startDestination: WorkoutStartDestination? = nil
 
     private var profile: CDUserProfile? { profiles.first }
     private var recentWorkouts: [CDWorkout] { Array(workouts.prefix(3)) }
@@ -49,8 +49,12 @@ struct HomeView: View {
             }
             .navigationTitle("GymTracker")
             .navigationBarTitleDisplayMode(.large)
-            .sheet(isPresented: $showingLogWorkout) {
-                LogWorkoutView()
+            .sheet(item: $startDestination) { destination in
+                if let workout = destination.workout {
+                    LogWorkoutView(workout: workout)
+                } else {
+                    LogWorkoutView()
+                }
             }
         }
     }
@@ -99,7 +103,7 @@ struct HomeView: View {
 
     private var startWorkoutButton: some View {
         Button {
-            showingLogWorkout = true
+            startDestination = WorkoutStartCoordinator.startDestination(from: Array(workouts))
         } label: {
             Label("Start Workout", systemImage: "plus.circle.fill")
                 .font(.headline)
@@ -118,7 +122,7 @@ struct HomeView: View {
 
             ForEach(recentWorkouts) { workout in
                 NavigationLink {
-                    WorkoutDetailView(workout: workout)
+                    WorkoutNavigationDestination(workout: workout)
                 } label: {
                     WorkoutSummaryRow(workout: workout, style: .card)
                 }

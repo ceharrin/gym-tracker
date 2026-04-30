@@ -42,14 +42,35 @@ struct LiveEntry: Identifiable {
 /// Owns the load/save/PR-detection logic for creating and editing workouts.
 /// Free of SwiftUI dependencies so it can be tested without a view host.
 enum WorkoutEditor {
+    enum SaveIntent {
+        case saveProgress
+        case complete
+    }
 
     struct WorkoutData {
         var title: String
         var date: Date
-        var durationMinutes: String
         var energyLevel: Int
         var notes: String
         var entries: [LiveEntry]
+
+        init(
+            title: String,
+            date: Date,
+            durationMinutes: String = "",
+            energyLevel: Int,
+            notes: String,
+            entries: [LiveEntry]
+        ) {
+            self.title = title
+            self.date = date
+            self.durationMinutes = durationMinutes
+            self.energyLevel = energyLevel
+            self.notes = notes
+            self.entries = entries
+        }
+
+        var durationMinutes: String
     }
 
     struct SaveResult {
@@ -125,9 +146,13 @@ enum WorkoutEditor {
         context: NSManagedObjectContext,
         existingWorkout: CDWorkout?,
         isDuplicate: Bool,
-        startTime: Date
+        startTime: Date,
+        intent: SaveIntent = .complete,
+        completedAt: Date = Date()
     ) throws -> SaveResult {
-        let newPRNames = detectPRs(entries: data.entries, context: context, excludingWorkout: existingWorkout)
+        let newPRNames = intent == .complete
+            ? detectPRs(entries: data.entries, context: context, excludingWorkout: existingWorkout)
+            : []
 
         let workout: CDWorkout
         if let existing = existingWorkout, !isDuplicate {
@@ -142,9 +167,16 @@ enum WorkoutEditor {
         }
 
         workout.date = data.date
+        workout.startedAt = resolvedStartTime(existingWorkout: existingWorkout, isDuplicate: isDuplicate, fallback: startTime)
         workout.title = data.title.isEmpty ? "Workout" : data.title
-        workout.durationMinutes = Int32(data.durationMinutes) ??
-            (existingWorkout == nil ? Int32(Date().timeIntervalSince(startTime) / 60) : workout.durationMinutes)
+        workout.durationMinutes = resolvedDurationMinutes(
+            existingWorkout: existingWorkout,
+            isDuplicate: isDuplicate,
+            startTime: workout.sessionStartDate,
+            completedAt: completedAt,
+            intent: intent
+        )
+        workout.isCompleted = (intent == .complete)
         workout.energyLevel = Int16(data.energyLevel)
         workout.notes = data.notes.isEmpty ? nil : data.notes
 
@@ -215,6 +247,29 @@ enum WorkoutEditor {
         let m = Int32(set.durationMinutes) ?? 0
         let s = Int32(set.durationSeconds) ?? 0
         return m * 60 + s
+    }
+
+    private static func resolvedStartTime(existingWorkout: CDWorkout?, isDuplicate: Bool, fallback: Date) -> Date {
+        guard let existingWorkout, !isDuplicate else { return fallback }
+        return existingWorkout.startedAt ?? fallback
+    }
+
+    private static func resolvedDurationMinutes(
+        existingWorkout: CDWorkout?,
+        isDuplicate: Bool,
+        startTime: Date,
+        completedAt: Date,
+        intent: SaveIntent
+    ) -> Int32 {
+        if let existingWorkout, !isDuplicate, existingWorkout.isCompleted {
+            return existingWorkout.durationMinutes
+        }
+
+        let elapsedMinutes = max(0, Int32(completedAt.timeIntervalSince(startTime) / 60))
+        switch intent {
+        case .saveProgress, .complete:
+            return elapsedMinutes
+        }
     }
 
     private static func defaultWorkoutTitle(on date: Date) -> String {

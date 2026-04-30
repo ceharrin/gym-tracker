@@ -82,6 +82,13 @@ final class WorkoutExporterTests: XCTestCase {
         XCTAssertEqual(url.pathExtension, "pdf", "Export must use the .pdf extension")
     }
 
+    func test_exportHTML_defaultDirectory_usesShareExportsFolder() throws {
+        let workout = makeWorkout()
+        let url = try WorkoutExporter.exportHTML(for: workout)
+
+        XCTAssertEqual(url.deletingLastPathComponent().lastPathComponent, WorkoutExporter.exportDirectoryName)
+    }
+
     // MARK: - Filename
 
     func test_exportHTML_filenameContainsWorkoutTitle() throws {
@@ -89,6 +96,25 @@ final class WorkoutExporterTests: XCTestCase {
         let url = try WorkoutExporter.exportHTML(for: workout, directory: tempDirectory)
         XCTAssertTrue(url.lastPathComponent.contains("Heavy Leg Day"),
                       "Filename should contain the workout title so share sheets show a meaningful name")
+    }
+
+    func test_exportHTML_repeatedExportsUseDistinctFileURLs() throws {
+        let workout = makeWorkout(title: "Thursday Workout")
+
+        let firstURL = try WorkoutExporter.exportHTML(for: workout, directory: tempDirectory)
+        let secondURL = try WorkoutExporter.exportHTML(for: workout, directory: tempDirectory)
+
+        XCTAssertNotEqual(firstURL, secondURL,
+                          "Each export should use a unique temp URL so the system never references a replaced file")
+    }
+
+    func test_defaultExportDirectory_createsDirectory() throws {
+        let directory = try WorkoutExporter.defaultExportDirectory()
+
+        var isDirectory: ObjCBool = false
+        let exists = FileManager.default.fileExists(atPath: directory.path, isDirectory: &isDirectory)
+        XCTAssertTrue(exists)
+        XCTAssertTrue(isDirectory.boolValue)
     }
 
     func test_sanitizedFilename_emptyTitle_usesDefault() {
@@ -106,7 +132,8 @@ final class WorkoutExporterTests: XCTestCase {
 
     func test_sanitizedFilename_normalTitle_preservedWithExtension() {
         let name = WorkoutExporter.sanitizedFilename(from: "Monday Push")
-        XCTAssertEqual(name, "Monday Push.pdf")
+        XCTAssertTrue(name.hasPrefix("Monday Push"))
+        XCTAssertTrue(name.hasSuffix(".pdf"))
     }
 
     // MARK: - HTML content

@@ -10,7 +10,9 @@ public class CDWorkout: NSManagedObject {
     @NSManaged public var durationMinutes: Int32
     @NSManaged public var energyLevel: Int16
     @NSManaged public var id: UUID?
+    @NSManaged public var isCompleted: Bool
     @NSManaged public var notes: String?
+    @NSManaged public var startedAt: Date?
     @NSManaged public var title: String
     @NSManaged public var entries: NSSet?
 }

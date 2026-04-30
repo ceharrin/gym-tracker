@@ -17,7 +17,7 @@ struct WorkoutDetailView: View {
 
     var body: some View {
         Group {
-            if isDeleting {
+            if isDeleting || !workout.canRenderInUI {
                 Color.clear
             } else {
                 ScrollView {
@@ -34,7 +34,7 @@ struct WorkoutDetailView: View {
                 }
             }
         }
-        .navigationTitle(workout.title)
+        .navigationTitle(workout.canRenderInUI ? workout.title : "")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
@@ -113,6 +113,16 @@ struct WorkoutDetailView: View {
 
     private var metaCard: some View {
         VStack(alignment: .leading, spacing: 14) {
+            if let statusLabel = workout.statusLabel {
+                Text(statusLabel)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.accentColor.opacity(0.12))
+                    .foregroundStyle(Color.accentColor)
+                    .clipShape(Capsule())
+            }
             HStack(spacing: 0) {
                 metaStat(label: "Date", value: workout.date, style: .date)
                 Divider().frame(height: 40)
@@ -141,7 +151,7 @@ struct WorkoutDetailView: View {
 
     private var metaDurationStat: some View {
         VStack(spacing: 4) {
-            Text(workout.durationMinutes > 0 ? "\(workout.durationMinutes) min" : "—")
+            Text(workout.formattedDuration ?? "—")
                 .font(.subheadline)
                 .fontWeight(.semibold)
             Text("Duration")
@@ -248,6 +258,8 @@ struct EntryDetailCard: View {
                 Text("Time").frame(maxWidth: .infinity, alignment: .center)
             case .duration:
                 Text("Duration").frame(maxWidth: .infinity, alignment: .center)
+            case .reps:
+                Text("Reps").frame(maxWidth: .infinity, alignment: .center)
             case .custom:
                 Text("Value").frame(maxWidth: .infinity, alignment: .center)
             }
@@ -291,6 +303,9 @@ struct SetDisplayRow: View {
                     .frame(maxWidth: .infinity, alignment: .center)
             case .duration:
                 Text(set.durationSeconds > 0 ? set.formattedDuration : "—")
+                    .frame(maxWidth: .infinity, alignment: .center)
+            case .reps:
+                Text(set.reps > 0 ? "\(set.reps)" : "—")
                     .frame(maxWidth: .infinity, alignment: .center)
             case .custom:
                 Text(set.customValue > 0 ? String(format: "%.1f %@", set.customValue, set.customLabel ?? "") : "—")

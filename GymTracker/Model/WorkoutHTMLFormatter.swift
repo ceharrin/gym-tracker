@@ -104,6 +104,7 @@ enum WorkoutHTMLFormatter {
         case .distanceTime: return "<th>Distance (\(Units.distanceUnit))</th><th>Time</th>"
         case .lapsTime:     return "<th>Laps</th><th>Time</th>"
         case .duration:     return "<th>Duration</th>"
+        case .reps:         return "<th>Reps</th>"
         case .custom:       return "<th>Value</th>"
         }
     }
@@ -125,6 +126,9 @@ enum WorkoutHTMLFormatter {
         case .duration:
             let t = set.durationSeconds > 0 ? set.formattedDuration : "—"
             return "<td>\(t)</td>"
+        case .reps:
+            let r = set.reps > 0 ? "\(set.reps)" : "—"
+            return "<td>\(r)</td>"
         case .custom:
             let label = set.customLabel ?? ""
             let v = set.customValue > 0 ? String(format: "%.1f %@", set.customValue, label) : "—"

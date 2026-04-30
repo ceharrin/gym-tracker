@@ -59,7 +59,7 @@ final class ActivityCategoryTests: XCTestCase {
     // MARK: - PrimaryMetric
 
     func test_primaryMetric_allCases_count() {
-        XCTAssertEqual(PrimaryMetric.allCases.count, 5)
+        XCTAssertEqual(PrimaryMetric.allCases.count, 6)
     }
 
     func test_primaryMetric_rawValue_roundTrip() {
@@ -85,5 +85,20 @@ final class ActivityCategoryTests: XCTestCase {
 
     func test_primaryMetric_custom_noSecondaryLabel() {
         XCTAssertNil(PrimaryMetric.custom.secondaryLabel)
+    }
+
+    func test_primaryMetric_reps_noSecondaryLabel() {
+        XCTAssertNil(PrimaryMetric.reps.secondaryLabel)
+    }
+
+    func test_availableMetrics_customIncludesReps() {
+        XCTAssertTrue(ActivityEditor.availableMetrics(for: .custom).contains(.reps))
+    }
+
+    func test_availableMetrics_nonCustomExcludesReps() {
+        for category in ActivityCategory.allCases where category != .custom {
+            XCTAssertFalse(ActivityEditor.availableMetrics(for: category).contains(.reps),
+                           "\(category.rawValue) should not offer the reps-only metric")
+        }
     }
 }

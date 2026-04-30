@@ -3,7 +3,8 @@ import SwiftUI
 struct WorkoutMetaSection: View {
     @Binding var title: String
     @Binding var workoutDate: Date
-    @Binding var durationMinutes: String
+    let durationText: String
+    let statusText: String?
 
     var body: some View {
         VStack(spacing: 12) {
@@ -21,15 +22,13 @@ struct WorkoutMetaSection: View {
                     .background(Color(.secondarySystemBackground))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
 
-                HStack {
-                    Image(systemName: "timer")
+                VStack(alignment: .leading, spacing: 4) {
+                    Label(durationText, systemImage: "timer")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    Text(statusText ?? "Calculated automatically")
+                        .font(.caption)
                         .foregroundStyle(.secondary)
-                    TextField("Duration (min)", text: $durationMinutes)
-                        .keyboardType(.numberPad)
-                        .onChange(of: durationMinutes) { _, value in
-                            let filtered = filterNumericInput(value, allowDecimal: false)
-                            if filtered != value { durationMinutes = filtered }
-                        }
                 }
                 .padding(12)
                 .background(Color(.secondarySystemBackground))
@@ -144,6 +143,8 @@ struct EntrySection: View {
             case .duration:
                 Text("min").frame(maxWidth: .infinity, alignment: .center)
                 Text("sec").frame(maxWidth: .infinity, alignment: .center)
+            case .reps:
+                Text("Reps").frame(maxWidth: .infinity, alignment: .center)
             case .custom:
                 Text("Value").frame(maxWidth: .infinity, alignment: .center)
             }
@@ -190,6 +191,8 @@ struct LiveSetRow: View {
             case .duration:
                 inputField($set.durationMinutes, placeholder: "00", keyboard: .numberPad)
                 inputField($set.durationSeconds, placeholder: "00", keyboard: .numberPad)
+            case .reps:
+                inputField($set.reps, placeholder: "0", keyboard: .numberPad)
             case .custom:
                 inputField($set.customValue, placeholder: "0", keyboard: .decimalPad)
                 inputField($set.customLabel, placeholder: "unit", keyboard: .default)

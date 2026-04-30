@@ -67,6 +67,7 @@ enum PrimaryMetric: String, CaseIterable, Identifiable {
     case distanceTime = "distance_time"
     case lapsTime     = "laps_time"
     case duration     = "duration"
+    case reps         = "reps"
     case custom       = "custom"
 
     var id: String { rawValue }
@@ -77,6 +78,7 @@ enum PrimaryMetric: String, CaseIterable, Identifiable {
         case .distanceTime: return "Distance & Time"
         case .lapsTime:     return "Laps & Time"
         case .duration:     return "Duration Only"
+        case .reps:         return "Reps Only"
         case .custom:       return "Custom"
         }
     }
@@ -87,6 +89,7 @@ enum PrimaryMetric: String, CaseIterable, Identifiable {
         case .distanceTime: return "Distance (km)"
         case .lapsTime:     return "Laps"
         case .duration:     return "Duration"
+        case .reps:         return "Reps"
         case .custom:       return "Value"
         }
     }
@@ -96,7 +99,7 @@ enum PrimaryMetric: String, CaseIterable, Identifiable {
         case .weightReps:   return "Reps"
         case .distanceTime: return "Time"
         case .lapsTime:     return "Time"
-        case .duration:     return nil
+        case .duration, .reps: return nil
         case .custom:       return nil
         }
     }
@@ -110,6 +113,7 @@ enum PrimaryMetric: String, CaseIterable, Identifiable {
         case .distanceTime: return Units.distanceUnit
         case .lapsTime:     return "laps"
         case .duration:     return "min"
+        case .reps:         return "reps"
         case .custom:       return "value"
         }
     }
@@ -122,6 +126,7 @@ enum PrimaryMetric: String, CaseIterable, Identifiable {
         case .distanceTime: return Units.distanceValue(fromMeters: set.distanceMeters)
         case .lapsTime:     return Double(set.laps)
         case .duration:     return Double(set.durationSeconds) / 60
+        case .reps:         return Double(set.reps)
         case .custom:       return set.customValue
         }
     }
@@ -129,7 +134,7 @@ enum PrimaryMetric: String, CaseIterable, Identifiable {
     /// Formats a chart value for annotation labels.
     func formattedChartValue(_ value: Double) -> String {
         switch self {
-        case .lapsTime, .duration: return String(format: "%.0f", value)
+        case .lapsTime, .duration, .reps: return String(format: "%.0f", value)
         default:                   return String(format: "%.1f", value)
         }
     }
@@ -182,6 +187,9 @@ enum PrimaryMetric: String, CaseIterable, Identifiable {
         case .duration:
             guard let longest = sets.max(by: { $0.durationSeconds < $1.durationSeconds }) else { return [] }
             return [ProgressPersonalRecord(label: "Longest Session", value: longest.formattedDuration)]
+        case .reps:
+            guard let most = sets.max(by: { $0.reps < $1.reps }) else { return [] }
+            return [ProgressPersonalRecord(label: "Most Reps", value: "\(most.reps) reps")]
         case .custom:
             guard let best = sets.max(by: { $0.customValue < $1.customValue }) else { return [] }
             return [

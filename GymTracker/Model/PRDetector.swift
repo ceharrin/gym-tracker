@@ -31,6 +31,12 @@ func isNewPersonalRecord(liveSet: LiveSet, metric: PrimaryMetric, against histor
         guard !history.isEmpty else { return true }
         return secs > (history.map(\.durationSeconds).max() ?? 0)
 
+    case .reps:
+        let val = Int32(liveSet.reps) ?? 0
+        guard val > 0 else { return false }
+        guard !history.isEmpty else { return true }
+        return val > (history.map(\.reps).max() ?? 0)
+
     case .custom:
         let val = Double(liveSet.customValue) ?? 0
         guard val > 0 else { return false }
