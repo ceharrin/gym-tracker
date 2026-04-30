@@ -12,7 +12,7 @@ struct ActivityLibraryView: View {
     @State private var searchText = ""
     @State private var selectedCategory: ActivityCategory? = nil
     @State private var showingAdd = false
-    @State private var selectedActivityForEdit: CDActivity? = nil
+    @State private var selectedActivityForTutorial: CDActivity? = nil
     @State private var persistenceAlert: PersistenceAlertState? = nil
 
     private var filtered: [CDActivity] {
@@ -45,11 +45,16 @@ struct ActivityLibraryView: View {
                             let presets = items.filter(\.isPreset)
                             let custom  = items.filter { !$0.isPreset }
                             ForEach(presets) { activity in
-                                ActivityLibraryRow(activity: activity)
+                                Button {
+                                    selectedActivityForTutorial = activity
+                                } label: {
+                                    ActivityLibraryRow(activity: activity)
+                                }
+                                .buttonStyle(.plain)
                             }
                             ForEach(custom) { activity in
                                 Button {
-                                    selectedActivityForEdit = activity
+                                    selectedActivityForTutorial = activity
                                 } label: {
                                     ActivityLibraryRow(activity: activity, isEditable: true)
                                 }
@@ -82,8 +87,8 @@ struct ActivityLibraryView: View {
             .sheet(isPresented: $showingAdd) {
                 AddActivityView()
             }
-            .sheet(item: $selectedActivityForEdit) { activity in
-                AddActivityView(activity: activity)
+            .sheet(item: $selectedActivityForTutorial) { activity in
+                ActivityTutorialView(activity: activity)
             }
             .persistenceErrorAlert($persistenceAlert)
         }
@@ -169,11 +174,9 @@ struct ActivityLibraryRow: View {
                 .font(.caption)
                 .foregroundStyle(.secondary)
 
-            if isEditable {
-                Image(systemName: "chevron.right")
-                    .font(.caption2)
-                    .foregroundStyle(.tertiary)
-            }
+            Image(systemName: "chevron.right")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
         }
     }
 }

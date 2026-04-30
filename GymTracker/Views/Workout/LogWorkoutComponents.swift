@@ -67,6 +67,7 @@ struct WorkoutFinishingSection: View {
 struct EntrySection: View {
     @Binding var entry: LiveEntry
     let onDeleteEntry: () -> Void
+    @State private var showingTutorial = false
 
     var body: some View {
         Section {
@@ -113,6 +114,14 @@ struct EntrySection: View {
                     .textCase(nil)
                     .foregroundStyle(.primary)
                 Spacer()
+                Button {
+                    showingTutorial = true
+                } label: {
+                    Image(systemName: "info.circle")
+                        .foregroundStyle(.secondary)
+                        .font(.body)
+                }
+                .buttonStyle(.plain)
                 Button(role: .destructive, action: onDeleteEntry) {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(.secondary)
@@ -121,6 +130,9 @@ struct EntrySection: View {
                 .buttonStyle(.plain)
             }
             .padding(.vertical, 4)
+        }
+        .sheet(isPresented: $showingTutorial) {
+            ActivityTutorialView(activity: entry.activity)
         }
     }
 

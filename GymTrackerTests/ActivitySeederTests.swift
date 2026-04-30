@@ -67,4 +67,68 @@ final class ActivitySeederTests: XCTestCase {
         XCTAssertNotNil(squat.id)
         XCTAssertNotNil(squat.createdAt)
     }
+
+    func test_seedIfNeeded_populatesInstructions() throws {
+        ActivitySeeder.seedIfNeeded(context: context)
+
+        let request = CDActivity.fetchRequest()
+        request.predicate = NSPredicate(format: "name == %@", "Squat")
+        let squat = try XCTUnwrap(context.fetch(request).first)
+
+        XCTAssertNotNil(squat.instructions)
+        XCTAssertFalse(squat.instructions!.isEmpty)
+    }
+
+    func test_seedIfNeeded_allPresetsHaveInstructions() throws {
+        ActivitySeeder.seedIfNeeded(context: context)
+
+        let request = CDActivity.fetchRequest()
+        request.predicate = NSPredicate(format: "isPreset == true AND (instructions == nil OR instructions == '')")
+        let missing = try context.fetch(request)
+
+        XCTAssertTrue(missing.isEmpty, "Presets missing instructions: \(missing.map(\.name).joined(separator: ", "))")
+    }
+
+    func test_updateInstructionsIfNeeded_fillsNilInstructions() throws {
+        let activity = CDActivity(context: context)
+        activity.id = UUID()
+        activity.name = "Squat"
+        activity.category = ActivityCategory.strength.rawValue
+        activity.icon = "figure.strengthtraining.traditional"
+        activity.primaryMetric = PrimaryMetric.weightReps.rawValue
+        activity.isPreset = true
+        activity.createdAt = Date()
+        activity.instructions = nil
+        try context.save()
+
+        ActivitySeeder.updateInstructionsIfNeeded(context: context)
+
+        let request = CDActivity.fetchRequest()
+        request.predicate = NSPredicate(format: "name == %@", "Squat")
+        let squat = try XCTUnwrap(context.fetch(request).first)
+
+        XCTAssertNotNil(squat.instructions)
+        XCTAssertFalse(squat.instructions!.isEmpty)
+    }
+
+    func test_updateInstructionsIfNeeded_doesNotOverwriteExistingInstructions() throws {
+        let activity = CDActivity(context: context)
+        activity.id = UUID()
+        activity.name = "Squat"
+        activity.category = ActivityCategory.strength.rawValue
+        activity.icon = "figure.strengthtraining.traditional"
+        activity.primaryMetric = PrimaryMetric.weightReps.rawValue
+        activity.isPreset = true
+        activity.createdAt = Date()
+        activity.instructions = "My custom instructions"
+        try context.save()
+
+        ActivitySeeder.updateInstructionsIfNeeded(context: context)
+
+        let request = CDActivity.fetchRequest()
+        request.predicate = NSPredicate(format: "name == %@", "Squat")
+        let squat = try XCTUnwrap(context.fetch(request).first)
+
+        XCTAssertEqual(squat.instructions, "My custom instructions")
+    }
 }
