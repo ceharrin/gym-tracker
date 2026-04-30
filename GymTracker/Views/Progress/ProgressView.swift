@@ -36,7 +36,6 @@ struct ProgressView: View {
                     } else {
                         ForEach(selectedActivities.sorted { $0.name < $1.name }) { activity in
                             activityChart(for: activity)
-                            personalRecordCard(for: activity)
                         }
                     }
                 }
