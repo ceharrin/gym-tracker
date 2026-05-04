@@ -7,6 +7,62 @@ import UIKit
 enum WorkoutExporter {
     static let exportDirectoryName = "ShareExports"
 
+    struct ExportDateRange: Equatable {
+        let startDate: Date
+        let endDate: Date
+
+        func normalized(calendar: Calendar = .current) -> ExportDateRange {
+            let lowerBound = min(startDate, endDate)
+            let upperBound = max(startDate, endDate)
+            return ExportDateRange(startDate: lowerBound, endDate: upperBound)
+        }
+
+        func contains(_ date: Date, calendar: Calendar = .current) -> Bool {
+            let normalized = normalized(calendar: calendar)
+            let lowerBound = calendar.startOfDay(for: normalized.startDate)
+            guard let upperExclusive = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: normalized.endDate)) else {
+                return date >= lowerBound
+            }
+            return date >= lowerBound && date < upperExclusive
+        }
+    }
+
+    enum ExportDateRangePreset: String, CaseIterable, Identifiable {
+        case allTime
+        case last7Days
+        case last30Days
+        case thisMonth
+
+        var id: String { rawValue }
+
+        var title: String {
+            switch self {
+            case .allTime: return "All Time"
+            case .last7Days: return "Last 7 Days"
+            case .last30Days: return "Last 30 Days"
+            case .thisMonth: return "This Month"
+            }
+        }
+
+        func resolve(within bounds: ClosedRange<Date>, now: Date = Date(), calendar: Calendar = .current) -> ExportDateRange {
+            let boundedNow = min(max(now, bounds.lowerBound), bounds.upperBound)
+
+            switch self {
+            case .allTime:
+                return ExportDateRange(startDate: bounds.lowerBound, endDate: bounds.upperBound)
+            case .last7Days:
+                let start = calendar.date(byAdding: .day, value: -6, to: boundedNow) ?? boundedNow
+                return ExportDateRange(startDate: max(start, bounds.lowerBound), endDate: boundedNow)
+            case .last30Days:
+                let start = calendar.date(byAdding: .day, value: -29, to: boundedNow) ?? boundedNow
+                return ExportDateRange(startDate: max(start, bounds.lowerBound), endDate: boundedNow)
+            case .thisMonth:
+                let monthStart = calendar.date(from: calendar.dateComponents([.year, .month], from: boundedNow)) ?? boundedNow
+                return ExportDateRange(startDate: max(monthStart, bounds.lowerBound), endDate: boundedNow)
+            }
+        }
+    }
+
     enum ExportError: LocalizedError {
         case renderFailure
         case directoryCreationFailure(Error)
@@ -51,12 +107,12 @@ enum WorkoutExporter {
     // MARK: CSV export
 
     /// Produces a CSV file containing every set from every supplied workout and returns its URL.
-    static func exportCSV(for workouts: [CDWorkout], directory: URL? = nil) throws -> URL {
+    static func exportCSV(for workouts: [CDWorkout], in range: ExportDateRange? = nil, directory: URL? = nil) throws -> URL {
         let dir = try directory ?? defaultExportDirectory()
-        let filename = "GymTracker-Workouts-\(UUID().uuidString).csv"
+        let filename = csvFilename(for: range)
         let destinationURL = dir.appendingPathComponent(filename)
 
-        let csv = buildCSV(for: workouts)
+        let csv = buildCSV(for: workouts, in: range)
         do {
             try csv.write(to: destinationURL, atomically: true, encoding: .utf8)
             return destinationURL
@@ -65,7 +121,7 @@ enum WorkoutExporter {
         }
     }
 
-    static func buildCSV(for workouts: [CDWorkout]) -> String {
+    static func buildCSV(for workouts: [CDWorkout], in range: ExportDateRange? = nil) -> String {
         let dateFormatter = DateFormatter()
         dateFormatter.dateStyle = .medium
         dateFormatter.timeStyle = .none
@@ -74,7 +130,7 @@ enum WorkoutExporter {
             "Date,Workout,Exercise,Category,Set,\(Units.weightUnit),Reps,\(Units.distanceUnit),Duration,Laps,Custom Value,Custom Label,PR Attempt"
         ]
 
-        let sorted = workouts.sorted { $0.date > $1.date }
+        let sorted = self.workouts(workouts, in: range).sorted { $0.date > $1.date }
         for workout in sorted {
             let date = csvEscape(dateFormatter.string(from: workout.date))
             let workoutTitle = csvEscape(workout.title)
@@ -96,6 +152,34 @@ enum WorkoutExporter {
             }
         }
         return rows.joined(separator: "\n")
+    }
+
+    static func workouts(_ workouts: [CDWorkout], in range: ExportDateRange?, calendar: Calendar = .current) -> [CDWorkout] {
+        guard let range else { return workouts }
+        return workouts.filter { range.contains($0.date, calendar: calendar) }
+    }
+
+    static func csvFilename(
+        for range: ExportDateRange?,
+        exportedAt: Date = Date(),
+        token: String = String(UUID().uuidString.prefix(6))
+    ) -> String {
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyy-MM-dd"
+
+        let baseName: String
+        if let range {
+            let normalized = range.normalized(calendar: formatter.calendar)
+            let start = formatter.string(from: normalized.startDate)
+            let end = formatter.string(from: normalized.endDate)
+            baseName = "GymTracker Workouts \(start) to \(end)"
+        } else {
+            baseName = "GymTracker Workouts \(formatter.string(from: exportedAt))"
+        }
+
+        return "\(baseName) \(token.uppercased()).csv"
     }
 
     private static func csvEscape(_ value: String) -> String {

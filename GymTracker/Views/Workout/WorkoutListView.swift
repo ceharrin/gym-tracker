@@ -16,6 +16,9 @@ struct WorkoutListView: View {
     @State private var showingCSVShare = false
     @State private var isExportingCSV = false
     @State private var csvExportError: String? = nil
+    @State private var showingCSVExportOptions = false
+    @State private var csvExportStartDate = Date()
+    @State private var csvExportEndDate = Date()
 
     private var filtered: [CDWorkout] {
         guard !searchText.isEmpty else { return Array(workouts) }
@@ -82,7 +85,7 @@ struct WorkoutListView: View {
                                 Label("Print Summary", systemImage: "printer")
                             }
                             Button {
-                                exportCSV()
+                                prepareCSVExport()
                             } label: {
                                 Label("Export CSV", systemImage: "tablecells")
                             }
@@ -102,6 +105,20 @@ struct WorkoutListView: View {
             }
             .sheet(isPresented: $showingPrintSummary) {
                 PrintSummaryView(allWorkouts: Array(workouts))
+            }
+            .sheet(isPresented: $showingCSVExportOptions) {
+                NavigationStack {
+                    WorkoutCSVExportRangeView(
+                        startDate: $csvExportStartDate,
+                        endDate: $csvExportEndDate,
+                        isExporting: isExportingCSV,
+                        availableRange: workoutDateBounds,
+                        onApplyPreset: applyCSVExportPreset,
+                        onCancel: { showingCSVExportOptions = false },
+                        onExport: exportCSV
+                    )
+                }
+                .presentationDetents([.medium])
             }
             .sheet(isPresented: $showingCSVShare, onDismiss: { csvShareURL = nil }) {
                 if let url = csvShareURL {
@@ -134,18 +151,52 @@ struct WorkoutListView: View {
         }
     }
 
+    private var workoutDateBounds: ClosedRange<Date>? {
+        guard let oldest = workouts.last?.date, let newest = workouts.first?.date else { return nil }
+        return oldest...newest
+    }
+
+    private func prepareCSVExport() {
+        guard let bounds = workoutDateBounds else {
+            csvExportError = "There are no workouts available to export."
+            return
+        }
+
+        csvExportStartDate = bounds.lowerBound
+        csvExportEndDate = bounds.upperBound
+        showingCSVExportOptions = true
+    }
+
     private func exportCSV() {
         guard !isExportingCSV else { return }
         isExportingCSV = true
         Task { @MainActor in
             defer { isExportingCSV = false }
             do {
-                csvShareURL = try WorkoutExporter.exportCSV(for: Array(workouts))
+                let selectedRange = WorkoutExporter.ExportDateRange(
+                    startDate: csvExportStartDate,
+                    endDate: csvExportEndDate
+                )
+                let workoutsToExport = WorkoutExporter.workouts(Array(workouts), in: selectedRange)
+                guard !workoutsToExport.isEmpty else {
+                    csvExportError = "No workouts were found in the selected date range."
+                    return
+                }
+
+                csvShareURL = try WorkoutExporter.exportCSV(for: workoutsToExport, in: selectedRange)
+                showingCSVExportOptions = false
                 showingCSVShare = true
             } catch {
                 csvExportError = error.localizedDescription
             }
         }
+    }
+
+    private func applyCSVExportPreset(_ preset: WorkoutExporter.ExportDateRangePreset) {
+        guard let bounds = workoutDateBounds else { return }
+        let resolved = preset.resolve(within: bounds)
+        csvExportStartDate = resolved.startDate
+        csvExportEndDate = resolved.endDate
     }
 
     private func delete(items: [CDWorkout], offsets: IndexSet) {
@@ -157,6 +208,63 @@ struct WorkoutListView: View {
         } catch {
             context.rollback()
             persistenceAlert = PersistenceAlertState(title: "Couldn't Delete Workout", error: error)
+        }
+    }
+}
+
+private struct WorkoutCSVExportRangeView: View {
+    @Binding var startDate: Date
+    @Binding var endDate: Date
+    let isExporting: Bool
+    let availableRange: ClosedRange<Date>?
+    let onApplyPreset: (WorkoutExporter.ExportDateRangePreset) -> Void
+    let onCancel: () -> Void
+    let onExport: () -> Void
+
+    var body: some View {
+        Form {
+            if availableRange != nil {
+                Section("Quick Ranges") {
+                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 10) {
+                        ForEach(WorkoutExporter.ExportDateRangePreset.allCases) { preset in
+                            Button(preset.title) {
+                                onApplyPreset(preset)
+                            }
+                            .buttonStyle(.bordered)
+                            .disabled(isExporting)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+            }
+
+            Section {
+                if let availableRange {
+                    DatePicker("Start Date", selection: $startDate, in: availableRange, displayedComponents: .date)
+
+                    DatePicker("End Date", selection: $endDate, in: availableRange, displayedComponents: .date)
+                } else {
+                    DatePicker("Start Date", selection: $startDate, displayedComponents: .date)
+
+                    DatePicker("End Date", selection: $endDate, displayedComponents: .date)
+                }
+            } header: {
+                Text("Export Range")
+            } footer: {
+                Text("Only workouts whose dates fall within the selected range will be included in the CSV.")
+            }
+        }
+        .navigationTitle("Export CSV")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel", action: onCancel)
+                    .disabled(isExporting)
+            }
+            ToolbarItem(placement: .confirmationAction) {
+                Button(isExporting ? "Exporting..." : "Export", action: onExport)
+                    .disabled(isExporting)
+            }
         }
     }
 }

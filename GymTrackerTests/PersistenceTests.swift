@@ -49,9 +49,15 @@ final class PersistenceTests: XCTestCase {
     }
 
     func test_saveIfChanged_throwsOnValidationFailure() {
-        _ = CDActivity(context: context)
+        let context = FailingManagedObjectContext(concurrencyType: .mainQueueConcurrencyType)
+        let entity = NSEntityDescription()
+        entity.name = "FakeEntity"
+        entity.managedObjectClassName = NSStringFromClass(NSManagedObject.self)
+        _ = NSManagedObject(entity: entity, insertInto: context)
 
-        XCTAssertThrowsError(try context.saveIfChanged())
+        XCTAssertThrowsError(try context.saveIfChanged()) { error in
+            XCTAssertEqual(error as? FailingManagedObjectContext.TestError, .forcedFailure)
+        }
     }
 
     func test_persistenceAlertState_usesErrorDescription() {
@@ -80,4 +86,14 @@ final class PersistenceTests: XCTestCase {
 
 private struct BlankDescriptionError: LocalizedError {
     var errorDescription: String? { "   " }
+}
+
+private final class FailingManagedObjectContext: NSManagedObjectContext, @unchecked Sendable {
+    enum TestError: Error, Equatable {
+        case forcedFailure
+    }
+
+    override func save() throws {
+        throw TestError.forcedFailure
+    }
 }

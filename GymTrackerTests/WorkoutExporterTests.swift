@@ -362,6 +362,118 @@ final class WorkoutExporterTests: XCTestCase {
                        "Every data row must have the same number of columns as the CSV header")
     }
 
+    func test_exportRange_containsDatesAcrossEntireSelectedDays() {
+        let calendar = Calendar(identifier: .gregorian)
+        let startDate = calendar.date(from: DateComponents(year: 2026, month: 5, day: 1, hour: 9))!
+        let endDate = calendar.date(from: DateComponents(year: 2026, month: 5, day: 3, hour: 18))!
+        let range = WorkoutExporter.ExportDateRange(startDate: startDate, endDate: endDate)
+
+        let firstDayWorkout = calendar.date(from: DateComponents(year: 2026, month: 5, day: 1, hour: 0, minute: 1))!
+        let lastDayWorkout = calendar.date(from: DateComponents(year: 2026, month: 5, day: 3, hour: 23, minute: 59))!
+        let afterRangeWorkout = calendar.date(from: DateComponents(year: 2026, month: 5, day: 4, hour: 0, minute: 0))!
+
+        XCTAssertTrue(range.contains(firstDayWorkout, calendar: calendar))
+        XCTAssertTrue(range.contains(lastDayWorkout, calendar: calendar))
+        XCTAssertFalse(range.contains(afterRangeWorkout, calendar: calendar))
+    }
+
+    func test_workoutsInRange_returnsOnlyWorkoutsWithinSelectedDays() {
+        let calendar = Calendar(identifier: .gregorian)
+        let olderDate = calendar.date(from: DateComponents(year: 2026, month: 4, day: 28, hour: 8))!
+        let inRangeDate = calendar.date(from: DateComponents(year: 2026, month: 5, day: 2, hour: 12))!
+        let newerDate = calendar.date(from: DateComponents(year: 2026, month: 5, day: 6, hour: 17))!
+
+        let older = makeFullWorkout(title: "Older Workout", date: olderDate)
+        let inRange = makeFullWorkout(title: "In Range Workout", date: inRangeDate)
+        let newer = makeFullWorkout(title: "Newer Workout", date: newerDate)
+
+        let range = WorkoutExporter.ExportDateRange(
+            startDate: calendar.date(from: DateComponents(year: 2026, month: 5, day: 1))!,
+            endDate: calendar.date(from: DateComponents(year: 2026, month: 5, day: 4))!
+        )
+
+        let filtered = WorkoutExporter.workouts([older, inRange, newer], in: range, calendar: calendar)
+
+        XCTAssertEqual(filtered.map(\.title), ["In Range Workout"])
+    }
+
+    func test_exportRangePreset_allTime_usesEntireAvailableBounds() {
+        let calendar = Calendar(identifier: .gregorian)
+        let lowerBound = calendar.date(from: DateComponents(year: 2026, month: 4, day: 1))!
+        let upperBound = calendar.date(from: DateComponents(year: 2026, month: 5, day: 31, hour: 23))!
+
+        let resolved = WorkoutExporter.ExportDateRangePreset.allTime.resolve(
+            within: lowerBound...upperBound,
+            now: calendar.date(from: DateComponents(year: 2026, month: 5, day: 10))!,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(resolved.startDate, lowerBound)
+        XCTAssertEqual(resolved.endDate, upperBound)
+    }
+
+    func test_exportRangePreset_last7Days_clampsToBounds() {
+        let calendar = Calendar(identifier: .gregorian)
+        let lowerBound = calendar.date(from: DateComponents(year: 2026, month: 5, day: 5))!
+        let upperBound = calendar.date(from: DateComponents(year: 2026, month: 5, day: 31, hour: 23))!
+        let now = calendar.date(from: DateComponents(year: 2026, month: 5, day: 8, hour: 12))!
+
+        let resolved = WorkoutExporter.ExportDateRangePreset.last7Days.resolve(
+            within: lowerBound...upperBound,
+            now: now,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(resolved.startDate, lowerBound)
+        XCTAssertEqual(resolved.endDate, now)
+    }
+
+    func test_exportRangePreset_thisMonth_startsAtMonthBoundary() {
+        let calendar = Calendar(identifier: .gregorian)
+        let lowerBound = calendar.date(from: DateComponents(year: 2026, month: 4, day: 15))!
+        let upperBound = calendar.date(from: DateComponents(year: 2026, month: 6, day: 10))!
+        let now = calendar.date(from: DateComponents(year: 2026, month: 5, day: 20, hour: 9))!
+
+        let resolved = WorkoutExporter.ExportDateRangePreset.thisMonth.resolve(
+            within: lowerBound...upperBound,
+            now: now,
+            calendar: calendar
+        )
+
+        XCTAssertEqual(resolved.startDate, calendar.date(from: DateComponents(year: 2026, month: 5, day: 1))!)
+        XCTAssertEqual(resolved.endDate, now)
+    }
+
+    func test_csvFilename_withoutRange_isHumanFriendly() {
+        var components = DateComponents()
+        components.year = 2026
+        components.month = 5
+        components.day = 4
+        components.hour = 12
+        components.timeZone = TimeZone(secondsFromGMT: 0)
+        let exportedAt = Calendar(identifier: .gregorian).date(from: components)!
+
+        let filename = WorkoutExporter.csvFilename(for: nil, exportedAt: exportedAt, token: "ABC123")
+
+        XCTAssertEqual(filename, "GymTracker Workouts 2026-05-04 ABC123.csv")
+    }
+
+    func test_csvFilename_withRange_includesDateSpan() {
+        let calendar = Calendar(identifier: .gregorian)
+        let range = WorkoutExporter.ExportDateRange(
+            startDate: calendar.date(from: DateComponents(year: 2026, month: 5, day: 1))!,
+            endDate: calendar.date(from: DateComponents(year: 2026, month: 5, day: 4))!
+        )
+
+        let filename = WorkoutExporter.csvFilename(
+            for: range,
+            exportedAt: calendar.date(from: DateComponents(year: 2026, month: 5, day: 6))!,
+            token: "ABC123"
+        )
+
+        XCTAssertEqual(filename, "GymTracker Workouts 2026-05-01 to 2026-05-04 ABC123.csv")
+    }
+
     func test_exportCSV_createsFile() throws {
         Units._testOverrideIsMetric = true
         defer { Units._testOverrideIsMetric = nil }
@@ -385,5 +497,31 @@ final class WorkoutExporterTests: XCTestCase {
         let url = try WorkoutExporter.exportCSV(for: [w], directory: tempDirectory)
         let content = try String(contentsOf: url, encoding: .utf8)
         XCTAssertTrue(content.hasPrefix("Date,"), "CSV file content must begin with the header row")
+    }
+
+    func test_exportCSV_withDateRange_onlyIncludesMatchingWorkouts() throws {
+        Units._testOverrideIsMetric = true
+        defer { Units._testOverrideIsMetric = nil }
+
+        let calendar = Calendar(identifier: .gregorian)
+        let oldWorkout = makeFullWorkout(
+            title: "April Workout",
+            date: calendar.date(from: DateComponents(year: 2026, month: 4, day: 30, hour: 8))!
+        )
+        let mayWorkout = makeFullWorkout(
+            title: "May Workout",
+            date: calendar.date(from: DateComponents(year: 2026, month: 5, day: 2, hour: 18))!
+        )
+
+        let range = WorkoutExporter.ExportDateRange(
+            startDate: calendar.date(from: DateComponents(year: 2026, month: 5, day: 1))!,
+            endDate: calendar.date(from: DateComponents(year: 2026, month: 5, day: 3))!
+        )
+
+        let url = try WorkoutExporter.exportCSV(for: [oldWorkout, mayWorkout], in: range, directory: tempDirectory)
+        let content = try String(contentsOf: url, encoding: .utf8)
+
+        XCTAssertTrue(content.contains("May Workout"))
+        XCTAssertFalse(content.contains("April Workout"))
     }
 }
