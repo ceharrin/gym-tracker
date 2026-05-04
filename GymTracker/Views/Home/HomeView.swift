@@ -35,20 +35,26 @@ struct HomeView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    headerSection
-                    statsRow
-                    startWorkoutButton
-                    if !recentWorkouts.isEmpty {
-                        recentSection
+            ZStack {
+                GymTheme.appBackground.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 20) {
+                        headerSection
+                        statsRow
+                        startWorkoutButton
+                        if !recentWorkouts.isEmpty {
+                            recentSection
+                        }
                     }
+                    .padding(.horizontal)
+                    .padding(.bottom, 20)
                 }
-                .padding(.horizontal)
-                .padding(.bottom, 20)
             }
             .navigationTitle("GymTracker")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(Color.white.opacity(0.92), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .sheet(item: $startDestination) { destination in
                 if let workout = destination.workout {
                     LogWorkoutView(workout: workout)
@@ -60,16 +66,46 @@ struct HomeView: View {
     }
 
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(greeting)
-                .font(.title2)
-                .fontWeight(.semibold)
-            Text(Date(), style: .date)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("TRAINING DAY")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .tracking(1.8)
+                        .foregroundStyle(GymTheme.brightBlue)
+                    Text(greeting)
+                        .font(.title2)
+                        .fontWeight(.bold)
+                        .foregroundStyle(.white)
+                    Text(Date(), style: .date)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.white.opacity(0.72))
+                }
+
+                Spacer()
+
+                ZStack {
+                    Circle()
+                        .fill(.white.opacity(0.12))
+                        .frame(width: 58, height: 58)
+                    Image(systemName: "figure.strengthtraining.traditional")
+                        .font(.title2)
+                        .foregroundStyle(.white)
+                }
+            }
+
+            HStack(spacing: 10) {
+                Label("Built for momentum", systemImage: "bolt.fill")
+                Label("Clean logbook", systemImage: "chart.line.uptrend.xyaxis")
+            }
+            .font(.caption)
+            .foregroundStyle(Color.white.opacity(0.82))
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(22)
         .padding(.top, 8)
+        .gymCard(cornerRadius: 28, dark: true)
     }
 
     private var statsRow: some View {
@@ -109,16 +145,23 @@ struct HomeView: View {
                 .font(.headline)
                 .frame(maxWidth: .infinity)
                 .padding()
-                .background(Color.accentColor)
+                .background(GymTheme.buttonBackground)
                 .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 16))
+                .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .shadow(color: GymTheme.electricBlue.opacity(0.30), radius: 16, x: 0, y: 10)
         }
     }
 
     private var recentSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Recent Workouts")
-                .font(.headline)
+            HStack {
+                Text("Recent Workouts")
+                    .font(.headline)
+                Spacer()
+                Text("Your latest sessions")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
 
             ForEach(recentWorkouts) { workout in
                 NavigationLink {
@@ -171,7 +214,6 @@ struct StatCard: View {
         }
         .frame(maxWidth: .infinity)
         .padding(12)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .gymCard(cornerRadius: 18)
     }
 }

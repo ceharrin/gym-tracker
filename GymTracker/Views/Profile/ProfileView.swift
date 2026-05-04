@@ -16,18 +16,24 @@ struct ProfileView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    if let profile {
-                        ProfileDataView(profile: profile)
+            ZStack {
+                GymTheme.appBackground.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 20) {
+                        if let profile {
+                            ProfileDataView(profile: profile)
+                        }
+                        activityLibraryButton
                     }
-                    activityLibraryButton
+                    .padding(.horizontal)
+                    .padding(.bottom, 20)
                 }
-                .padding(.horizontal)
-                .padding(.bottom, 20)
             }
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(Color.white.opacity(0.92), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button("Edit") { showingEdit = true }
@@ -54,8 +60,7 @@ struct ProfileView: View {
                     .foregroundStyle(.secondary)
             }
             .padding(16)
-            .background(Color(.secondarySystemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .gymCard()
         }
         .buttonStyle(.plain)
     }
@@ -89,24 +94,30 @@ private struct ProfileDataView: View {
                         .clipShape(Circle())
                 } else {
                     Circle()
-                        .fill(Color.accentColor.opacity(0.15))
+                        .fill(GymTheme.buttonBackground.opacity(0.16))
                         .frame(width: 90, height: 90)
                     Image(systemName: "person.fill")
                         .font(.system(size: 40))
-                        .foregroundStyle(Color.accentColor)
+                        .foregroundStyle(GymTheme.electricBlue)
                 }
             }
             Text(profile.name.isEmpty ? "Your Name" : profile.name)
                 .font(.title2)
                 .fontWeight(.semibold)
+                .foregroundStyle(.white)
             if let goals = profile.goals, !goals.isEmpty {
                 Text(goals)
                     .font(.subheadline)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(Color.white.opacity(0.72))
                     .multilineTextAlignment(.center)
             }
         }
+        .frame(maxWidth: .infinity)
         .padding(.top, 8)
+        .padding(.bottom, 8)
+        .padding(.horizontal, 18)
+        .padding(.vertical, 18)
+        .gymCard(dark: true)
     }
 
     private var statsGrid: some View {
@@ -169,8 +180,7 @@ private struct ProfileDataView: View {
             }
         }
         .padding(16)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .gymCard()
     }
 }
 
@@ -191,7 +201,6 @@ struct ProfileStatCell: View {
         }
         .frame(maxWidth: .infinity)
         .padding(12)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .gymCard(cornerRadius: 16)
     }
 }

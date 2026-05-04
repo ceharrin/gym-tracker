@@ -26,23 +26,29 @@ struct ProgressView: View {
 
     var body: some View {
         NavigationStack {
-            ScrollView {
-                VStack(spacing: 20) {
-                    rangeSelector
-                    bodyWeightChart
-                    activityPicker
-                    if selectedActivities.isEmpty {
-                        activityPlaceholder
-                    } else {
-                        ForEach(selectedActivities.sorted { $0.name < $1.name }) { activity in
-                            activityChart(for: activity)
+            ZStack {
+                GymTheme.appBackground.ignoresSafeArea()
+
+                ScrollView {
+                    VStack(spacing: 20) {
+                        rangeSelector
+                        bodyWeightChart
+                        activityPicker
+                        if selectedActivities.isEmpty {
+                            activityPlaceholder
+                        } else {
+                            ForEach(selectedActivities.sorted { $0.name < $1.name }) { activity in
+                                activityChart(for: activity)
+                            }
                         }
                     }
+                    .padding()
                 }
-                .padding()
             }
             .navigationTitle("Progress")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(Color.white.opacity(0.92), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
@@ -83,6 +89,9 @@ struct ProgressView: View {
             }
         }
         .pickerStyle(.segmented)
+        .padding(6)
+        .background(Color.white.opacity(0.64))
+        .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
     }
 
     // MARK: Body Weight Chart
@@ -133,8 +142,7 @@ struct ProgressView: View {
             }
         }
         .padding(16)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .gymCard()
     }
 
     private var filteredMeasurements: [CDBodyMeasurement] {
@@ -180,10 +188,20 @@ struct ProgressView: View {
                             .padding(.horizontal, 12)
                             .padding(.vertical, 7)
                             .background(selectedActivities.contains(activity)
-                                ? activity.activityCategory.color
-                                : Color(.secondarySystemBackground))
-                            .foregroundStyle(selectedActivities.contains(activity) ? .white : .primary)
+                                ? AnyShapeStyle(
+                                    LinearGradient(
+                                        colors: [activity.activityCategory.color, GymTheme.electricBlue],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                : AnyShapeStyle(Color.white.opacity(0.78)))
+                            .foregroundStyle(selectedActivities.contains(activity) ? .white : GymTheme.ink)
                             .clipShape(Capsule())
+                            .overlay {
+                                Capsule()
+                                    .stroke(Color.white.opacity(selectedActivities.contains(activity) ? 0.0 : 0.65), lineWidth: 1)
+                            }
                         }
                         .buttonStyle(.plain)
                     }
@@ -209,8 +227,7 @@ struct ProgressView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(32)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .gymCard()
     }
 
     // MARK: Activity Chart
@@ -262,8 +279,7 @@ struct ProgressView: View {
             }
         }
         .padding(16)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .gymCard()
     }
 
     // MARK: Personal Records
@@ -284,8 +300,7 @@ struct ProgressView: View {
             }
         }
         .padding(16)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .gymCard()
         } // end else
     }
 

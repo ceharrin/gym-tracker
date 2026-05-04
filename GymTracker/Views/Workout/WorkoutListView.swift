@@ -34,29 +34,44 @@ struct WorkoutListView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if workouts.isEmpty {
-                    emptyState
-                } else {
-                    List {
-                        ForEach(grouped, id: \.0) { month, items in
-                            Section(month) {
-                                ForEach(items) { workout in
-                                    NavigationLink {
-                                        WorkoutNavigationDestination(workout: workout)
-                                    } label: {
-                                        WorkoutSummaryRow(workout: workout, style: .list)
+            ZStack {
+                GymTheme.appBackground.ignoresSafeArea()
+
+                Group {
+                    if workouts.isEmpty {
+                        emptyState
+                    } else {
+                        List {
+                            ForEach(grouped, id: \.0) { month, items in
+                                Section {
+                                    ForEach(items) { workout in
+                                        NavigationLink {
+                                            WorkoutNavigationDestination(workout: workout)
+                                        } label: {
+                                            WorkoutSummaryRow(workout: workout, style: .list)
+                                        }
                                     }
+                                    .onDelete { delete(items: items, offsets: $0) }
+                                } header: {
+                                    Text(month)
+                                        .font(.caption)
+                                        .fontWeight(.bold)
+                                        .tracking(1.2)
+                                        .foregroundStyle(GymTheme.steel)
                                 }
-                                .onDelete { delete(items: items, offsets: $0) }
                             }
                         }
+                        .scrollContentBackground(.hidden)
+                        .listStyle(.insetGrouped)
+                        .listRowSpacing(10)
+                        .searchable(text: $searchText, prompt: "Search workouts")
                     }
-                    .searchable(text: $searchText, prompt: "Search workouts")
                 }
             }
             .navigationTitle("History")
             .navigationBarTitleDisplayMode(.large)
+            .toolbarBackground(Color.white.opacity(0.92), for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     if !workouts.isEmpty {
@@ -115,6 +130,7 @@ struct WorkoutListView: View {
                 startDestination = WorkoutStartCoordinator.startDestination(from: Array(workouts))
             }
                 .buttonStyle(.borderedProminent)
+                .tint(GymTheme.electricBlue)
         }
     }
 
@@ -211,9 +227,10 @@ struct WorkoutSummaryRow: View {
                     }
                 }
                 .padding(style == .card ? 14 : 0)
-                .padding(.vertical, style == .list ? 2 : 0)
-                .background(style == .card ? Color(.secondarySystemBackground) : Color.clear)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .padding(.vertical, style == .list ? 8 : 0)
+                .padding(.horizontal, style == .list ? 6 : 0)
+                .background(style == .card ? Color.clear : Color.clear)
+                .modifier(WorkoutSummaryRowTheme(style: style))
             }
         }
     }
@@ -222,7 +239,7 @@ struct WorkoutSummaryRow: View {
     private var iconBadge: some View {
         if style == .card {
             RoundedRectangle(cornerRadius: 10)
-                .fill(categoryColor.opacity(0.15))
+                .fill(categoryColor.opacity(0.14))
                 .frame(width: 48, height: 48)
                 .overlay {
                     Image(systemName: categoryIcon)
@@ -231,7 +248,7 @@ struct WorkoutSummaryRow: View {
         } else {
             ZStack {
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(categoryColor.opacity(0.15))
+                    .fill(categoryColor.opacity(0.14))
                     .frame(width: 40, height: 40)
                 Image(systemName: categoryIcon)
                     .foregroundStyle(categoryColor)
@@ -248,4 +265,21 @@ struct WorkoutSummaryRow: View {
 
     private var categoryIcon: String { workout.primaryCategoryIcon }
     private var categoryColor: Color  { workout.primaryCategoryColor }
+}
+
+private struct WorkoutSummaryRowTheme: ViewModifier {
+    let style: WorkoutSummaryRowStyle
+
+    func body(content: Content) -> some View {
+        switch style {
+        case .card:
+            content
+                .gymCard(cornerRadius: 18)
+        case .list:
+            content
+                .gymCard(cornerRadius: 18)
+                .listRowInsets(EdgeInsets(top: 6, leading: 0, bottom: 6, trailing: 0))
+                .listRowBackground(Color.clear)
+        }
+    }
 }

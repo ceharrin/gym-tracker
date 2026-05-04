@@ -23,5 +23,8 @@ struct MainTabView: View {
                     Label("Profile", systemImage: "person.fill")
                 }
         }
+        .tint(GymTheme.electricBlue)
+        .toolbarBackground(Color.white.opacity(0.92), for: .tabBar)
+        .toolbarBackground(.visible, for: .tabBar)
     }
 }
