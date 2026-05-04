@@ -42,25 +42,11 @@ struct ActivityLibraryView: View {
                 List {
                     ForEach(grouped, id: \.0) { category, items in
                         Section {
-                            let presets = items.filter(\.isPreset)
-                            let custom  = items.filter { !$0.isPreset }
-                            ForEach(presets) { activity in
-                                Button {
-                                    selectedActivityForTutorial = activity
-                                } label: {
-                                    ActivityLibraryRow(activity: activity)
-                                }
-                                .buttonStyle(.plain)
+                            if category == .strength {
+                                strengthSectionContent(items: items)
+                            } else {
+                                activityRows(items: items)
                             }
-                            ForEach(custom) { activity in
-                                Button {
-                                    selectedActivityForTutorial = activity
-                                } label: {
-                                    ActivityLibraryRow(activity: activity, isEditable: true)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                            .onDelete { deleteItems(from: custom, offsets: $0) }
                         } header: {
                             Label(category.displayName, systemImage: category.icon)
                                 .foregroundStyle(category.color)
@@ -128,6 +114,51 @@ struct ActivityLibraryView: View {
             context.rollback()
             persistenceAlert = PersistenceAlertState(title: "Couldn't Delete Activity", error: error)
         }
+    }
+
+    @ViewBuilder
+    private func strengthSectionContent(items: [CDActivity]) -> some View {
+        let orderedGroups = StrengthEquipmentGroup.allCases.filter { group in
+            items.contains { $0.strengthEquipmentGroup == group }
+        }
+
+        ForEach(orderedGroups) { group in
+            let groupItems = items.filter { $0.strengthEquipmentGroup == group }
+
+            if !groupItems.isEmpty {
+                Text(group.displayName)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.secondary)
+                    .textCase(nil)
+                activityRows(items: groupItems)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func activityRows(items: [CDActivity]) -> some View {
+        let presets = items.filter(\.isPreset)
+        let custom = items.filter { !$0.isPreset }
+
+        ForEach(presets) { activity in
+            Button {
+                selectedActivityForTutorial = activity
+            } label: {
+                ActivityLibraryRow(activity: activity)
+            }
+            .buttonStyle(.plain)
+        }
+
+        ForEach(custom) { activity in
+            Button {
+                selectedActivityForTutorial = activity
+            } label: {
+                ActivityLibraryRow(activity: activity, isEditable: true)
+            }
+            .buttonStyle(.plain)
+        }
+        .onDelete { deleteItems(from: custom, offsets: $0) }
     }
 }
 

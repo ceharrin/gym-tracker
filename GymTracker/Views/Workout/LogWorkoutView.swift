@@ -22,6 +22,7 @@ struct LogWorkoutView: View {
     @State private var startTime: Date = Date()
     @State private var confirmedPRs: [String] = []
     @State private var showingCelebration = false
+    @State private var showingCompleteConfirmation = false
     @State private var saveError: String? = nil
     @State private var completedDuringSession = false
     @State private var completedDurationMinutes: Int32? = nil
@@ -93,7 +94,11 @@ struct LogWorkoutView: View {
                             }
 
                             Button {
-                                save(intent: .complete)
+                                if shouldConfirmCompletion {
+                                    showingCompleteConfirmation = true
+                                } else {
+                                    save(intent: .complete)
+                                }
                             } label: {
                                 Text(primarySaveButtonTitle)
                                     .font(.headline)
@@ -122,6 +127,16 @@ struct LogWorkoutView: View {
                         dismiss()
                     }
                 }
+            }
+            .alert("Complete Workout?", isPresented: $showingCompleteConfirmation) {
+                Button("Cancel", role: .cancel) {
+                    showingCompleteConfirmation = false
+                }
+                Button("Complete", role: .destructive) {
+                    save(intent: .complete)
+                }
+            } message: {
+                Text("This will mark the workout as finished.")
             }
             .alert("Couldn't Save Workout", isPresented: Binding(
                 get: { saveError != nil },
@@ -233,6 +248,14 @@ struct LogWorkoutView: View {
         )
     }
 
+    private var shouldConfirmCompletion: Bool {
+        Self.shouldConfirmCompletion(
+            existingWorkout: existingWorkout,
+            isDuplicate: isDuplicate,
+            completedDuringSession: completedDuringSession
+        )
+    }
+
     static func isWorkoutCompleted(
         existingWorkout: CDWorkout?,
         isDuplicate: Bool,
@@ -240,5 +263,17 @@ struct LogWorkoutView: View {
     ) -> Bool {
         guard !isDuplicate else { return false }
         return completedDuringSession || existingWorkout?.isCompleted == true
+    }
+
+    static func shouldConfirmCompletion(
+        existingWorkout: CDWorkout?,
+        isDuplicate: Bool,
+        completedDuringSession: Bool
+    ) -> Bool {
+        !isWorkoutCompleted(
+            existingWorkout: existingWorkout,
+            isDuplicate: isDuplicate,
+            completedDuringSession: completedDuringSession
+        )
     }
 }

@@ -112,4 +112,36 @@ final class WorkoutStartCoordinatorTests: XCTestCase {
             )
         )
     }
+
+    func test_completionConfirmation_requiredForInProgressWorkout() {
+        let workout = makeWorkout(
+            title: "In Progress",
+            date: Date(timeIntervalSinceReferenceDate: 100),
+            isCompleted: false
+        )
+
+        XCTAssertTrue(
+            LogWorkoutView.shouldConfirmCompletion(
+                existingWorkout: workout,
+                isDuplicate: false,
+                completedDuringSession: false
+            )
+        )
+    }
+
+    func test_completionConfirmation_notRequiredForCompletedWorkoutEdits() {
+        let workout = makeWorkout(
+            title: "Completed",
+            date: Date(timeIntervalSinceReferenceDate: 100),
+            isCompleted: true
+        )
+
+        XCTAssertFalse(
+            LogWorkoutView.shouldConfirmCompletion(
+                existingWorkout: workout,
+                isDuplicate: false,
+                completedDuringSession: false
+            )
+        )
+    }
 }

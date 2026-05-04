@@ -14,160 +14,478 @@ struct ActivitySeeder {
     static let presets: [Preset] = [
         // MARK: - Strength
         Preset(
-            name: "Squat",
+            name: "Back Squat",
             category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
             muscles: "Quads, Glutes, Hamstrings",
-            instructions: "Stand with feet shoulder-width apart, toes slightly turned out.\nRest the bar on your upper traps and unrack it from the rack.\nBrace your core, take a deep breath, and hold it.\nDescend by pushing your knees out in line with your toes and sitting your hips back.\nLower until your thighs are parallel to the floor or below.\nDrive through your heels to stand back up.\nKeep your chest tall and back flat throughout the movement."
+            instructions: "Rest the bar on your upper back and brace your core before unracking.\nSit down between your hips while keeping your chest tall and knees tracking over your toes.\nDrive through your whole foot to stand back up under control."
+        ),
+        Preset(
+            name: "Front Squat",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Quads, Core, Upper Back",
+            instructions: "Rack the bar across the front of your shoulders with elbows high.\nStay upright as you descend, keeping your core braced and knees forward.\nDrive up smoothly while keeping your elbows lifted."
+        ),
+        Preset(
+            name: "Box Squat",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Quads, Glutes, Hamstrings",
+            instructions: "Set a box behind you at an appropriate height and squat back to it with control.\nPause briefly while staying braced, then drive up through your feet.\nAvoid collapsing onto the box or rocking for momentum."
         ),
         Preset(
             name: "Deadlift",
             category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
             muscles: "Hamstrings, Glutes, Lower Back",
-            instructions: "Stand with the bar over your mid-foot, feet hip-width apart.\nHinge at the hips and grip the bar just outside your legs.\nFlatten your back, lift your chest, and engage your lats.\nTake a deep breath and brace your core tightly.\nPush the floor away to initiate the lift, keeping the bar close to your shins.\nStand tall and squeeze your glutes at the top.\nHinge back down under control to return the bar to the floor."
-        ),
-        Preset(
-            name: "Bench Press",
-            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
-            muscles: "Chest, Triceps, Front Delts",
-            instructions: "Lie flat on the bench with feet firmly planted on the floor.\nGrip the bar slightly wider than shoulder-width.\nRetract your shoulder blades and press them firmly into the bench.\nUnrack the bar and lower it to your mid-chest under control.\nPress the bar back up explosively to full arm extension.\nKeep your shoulder blades retracted and your arch consistent throughout."
-        ),
-        Preset(
-            name: "Overhead Press",
-            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
-            muscles: "Shoulders, Triceps",
-            instructions: "Stand with feet shoulder-width apart, core braced.\nGrip the bar just outside your shoulders at collarbone height.\nPress the bar straight up, moving your head back slightly as it passes.\nLock out overhead with arms fully extended and elbows stacked over wrists.\nLower the bar under control back to the starting position.\nAvoid leaning back excessively — keep your glutes and core tight."
-        ),
-        Preset(
-            name: "Barbell Row",
-            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
-            muscles: "Back, Biceps",
-            instructions: "Hinge forward to about 45 degrees with a flat back.\nGrip the bar slightly wider than shoulder-width, palms facing down.\nPull the bar toward your lower chest, driving your elbows back.\nSqueeze your shoulder blades together at the top of the pull.\nLower the bar under control to full arm extension.\nKeep your core braced and back flat throughout."
-        ),
-        Preset(
-            name: "Pull-Up",
-            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
-            muscles: "Lats, Biceps",
-            instructions: "Hang from the bar with arms fully extended, grip slightly wider than shoulders.\nPull your shoulder blades down and back before initiating the movement.\nPull your chest toward the bar by driving your elbows down and back.\nLower yourself under control to the starting position.\nAvoid kipping or swinging to build real strength."
-        ),
-        Preset(
-            name: "Chin-Up",
-            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
-            muscles: "Lats, Biceps",
-            instructions: "Hang from the bar with arms fully extended and palms facing toward you.\nPull your shoulder blades down before starting.\nPull your chin over the bar by driving your elbows back.\nLower slowly under control to full arm extension.\nKeep your core braced to avoid excessive swinging."
-        ),
-        Preset(
-            name: "Leg Press",
-            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
-            muscles: "Quads, Glutes",
-            instructions: "Adjust the seat so your knees reach approximately 90 degrees at the bottom.\nPlace your feet hip-width apart on the platform.\nRelease the safety handles and lower the platform slowly.\nPress through your full foot to extend your legs.\nStop just short of locking your knees out at the top.\nReturn the safety handles when finished."
-        ),
-        Preset(
-            name: "Leg Curl",
-            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
-            muscles: "Hamstrings",
-            instructions: "Lie face down on the machine with the pad resting just above your ankles.\nKeep your hips pressed into the pad throughout the movement.\nCurl your heels toward your glutes as far as comfortable.\nSqueeze your hamstrings at the top of the movement.\nLower the pad slowly back to the starting position.\nAvoid lifting your hips to use momentum."
-        ),
-        Preset(
-            name: "Leg Extension",
-            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
-            muscles: "Quads",
-            instructions: "Sit in the machine with the pad resting just above your feet.\nKeep your back against the pad and knees at the edge of the seat.\nExtend your legs until straight, squeezing your quads at the top.\nHold briefly, then lower slowly under control.\nAvoid snapping your knees to full extension forcefully."
-        ),
-        Preset(
-            name: "Chest Press",
-            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
-            muscles: "Chest, Triceps",
-            instructions: "Adjust the seat so the handles align with your mid-chest.\nGrip the handles and keep your back firmly against the pad.\nPress the handles forward until your arms are nearly extended.\nReturn slowly under control, stopping before the weight stack touches.\nKeep your shoulders relaxed and down throughout."
-        ),
-        Preset(
-            name: "Lat Pulldown",
-            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
-            muscles: "Lats, Biceps",
-            instructions: "Adjust the knee pad to secure your thighs.\nGrip the bar wider than shoulder-width with palms facing away.\nSit tall and lean back very slightly.\nPull the bar to your upper chest by driving your elbows down and back.\nSqueeze your lats at the bottom of the movement.\nReturn the bar slowly to the starting position with control."
-        ),
-        Preset(
-            name: "Seated Row",
-            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
-            muscles: "Back, Biceps",
-            instructions: "Sit with a slight forward lean and a flat back.\nGrip the handles with arms fully extended.\nPull the handles toward your lower abdomen, driving your elbows back.\nSqueeze your shoulder blades together at the end of the pull.\nReturn slowly under control with a slight forward lean.\nKeep your core braced and avoid rounding your back."
-        ),
-        Preset(
-            name: "Shoulder Press",
-            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
-            muscles: "Shoulders, Triceps",
-            instructions: "Adjust the seat so the handles are level with your shoulders.\nGrip the handles and keep your back firmly against the pad.\nPress overhead until your arms are nearly fully extended.\nLower slowly under control back to shoulder height.\nKeep your core engaged to avoid arching your lower back."
-        ),
-        Preset(
-            name: "Bicep Curl",
-            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
-            muscles: "Biceps",
-            instructions: "Stand with feet shoulder-width apart, dumbbells at your sides, palms forward.\nPin your elbows to your sides and keep them there throughout.\nCurl the weight up toward your shoulders by bending at the elbow.\nSqueeze your biceps at the top of the movement.\nLower slowly under control to the starting position.\nAvoid swinging your torso to generate momentum."
-        ),
-        Preset(
-            name: "Triceps Pushdown",
-            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
-            muscles: "Triceps",
-            instructions: "Set the cable with a rope or bar at chest height.\nGrip the attachment and pin your elbows firmly to your sides.\nExtend your arms fully downward, spreading the rope ends apart at the bottom.\nSqueeze your triceps at the bottom of the movement.\nReturn slowly under control to the starting position.\nKeep your torso upright and avoid using body momentum."
-        ),
-        Preset(
-            name: "Dumbbell Curl",
-            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
-            muscles: "Biceps",
-            instructions: "Hold dumbbells at your sides with palms facing forward or neutral.\nKeep your elbows stationary at your sides throughout.\nCurl the weights up, rotating your palms upward if starting neutral.\nSqueeze your biceps firmly at the top.\nLower slowly under control to the starting position.\nAlternate arms or perform both simultaneously."
-        ),
-        Preset(
-            name: "Lateral Raise",
-            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
-            muscles: "Lateral Delts",
-            instructions: "Stand with dumbbells at your sides, palms facing inward.\nRaise your arms out to the sides, leading with your elbows.\nLift until your arms reach shoulder height — no higher.\nPause briefly at the top, feeling the lateral deltoids contract.\nLower slowly under control.\nAvoid shrugging your shoulders or using momentum."
-        ),
-        Preset(
-            name: "Face Pull",
-            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
-            muscles: "Rear Delts, Rotator Cuff",
-            instructions: "Set the cable at face height and attach a rope.\nGrip the rope with both hands, thumbs pointing back.\nPull toward your face with your elbows high and flared out.\nExternally rotate your shoulders at the end, pulling the rope apart.\nRetract your shoulder blades at the peak of the movement.\nReturn slowly under control and repeat."
+            instructions: "Set the bar over your mid-foot, brace hard, and pull the slack out before lifting.\nPush the floor away while keeping the bar close to your legs.\nStand tall at the top, then hinge back down under control."
         ),
         Preset(
             name: "Romanian Deadlift",
             category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
             muscles: "Hamstrings, Glutes",
-            instructions: "Stand holding the bar or dumbbells at hip level, feet hip-width apart.\nPush your hips back while hinging forward, keeping your back flat.\nLower the weight along the front of your legs until you feel a deep hamstring stretch.\nDrive your hips forward to return to standing.\nKeep a slight bend in your knees throughout.\nAvoid rounding your lower back — this is the most important cue."
+            instructions: "Start tall with the weight at your hips and hinge back with soft knees.\nLower until you feel a strong hamstring stretch while keeping your back flat.\nDrive your hips forward to return to standing."
+        ),
+        Preset(
+            name: "Sumo Deadlift",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Glutes, Hamstrings, Adductors",
+            instructions: "Set your feet wider than shoulder-width with toes turned out and hands inside your knees.\nBrace, push your knees out, and drive the floor apart as you lift.\nFinish tall without overleaning back."
+        ),
+        Preset(
+            name: "Good Morning",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Hamstrings, Glutes, Lower Back",
+            instructions: "Place the bar on your upper back and unlock your knees slightly.\nHinge forward by sending your hips back while keeping your spine neutral.\nReturn to standing by squeezing your glutes."
         ),
         Preset(
             name: "Hip Thrust",
             category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
             muscles: "Glutes, Hamstrings",
-            instructions: "Rest your upper back on the edge of a bench with feet hip-width apart.\nPlace the barbell across your hip crease, using a pad for comfort.\nDrive your hips upward by squeezing your glutes.\nLock out at the top until your body forms a straight line from shoulders to knees.\nKeep your chin tucked to maintain a neutral spine.\nLower slowly under control and repeat."
+            instructions: "Set your upper back on a bench with the bar across your hips.\nDrive your hips up until your torso is parallel to the floor and squeeze your glutes.\nLower under control without losing tension."
         ),
         Preset(
-            name: "Plank",
-            category: .strength, icon: "figure.core.training", metric: .duration,
-            muscles: "Core",
-            instructions: "Place your forearms on the floor with elbows directly under your shoulders.\nRise onto your toes so your body forms a straight line from head to heels.\nBrace your core as if bracing for a punch.\nSqueeze your glutes and thighs to add stability.\nBreathe steadily — do not hold your breath.\nHold for your target duration, keeping your hips level throughout."
-        ),
-        Preset(
-            name: "Push-Up",
+            name: "Barbell Lunge",
             category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
-            muscles: "Chest, Triceps",
-            instructions: "Place your hands slightly wider than shoulder-width on the floor.\nCreate a straight line from head to heels by bracing your core.\nLower your chest toward the floor under control.\nPress back up to full arm extension.\nKeep your elbows at roughly 45 degrees to your torso — not flared wide.\nModify by dropping to your knees if needed to maintain good form."
+            muscles: "Quads, Glutes, Hamstrings",
+            instructions: "Carry the bar on your upper back and step into a long, stable stride.\nLower until both knees are bent, then push through the front foot to return.\nStay tall and controlled on every rep."
         ),
         Preset(
-            name: "Dip",
+            name: "Barbell Split Squat",
             category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
-            muscles: "Chest, Triceps",
-            instructions: "Grip the parallel bars with arms fully extended.\nLean slightly forward for chest emphasis, or stay more upright for triceps.\nLower your body by bending your elbows until they reach about 90 degrees.\nPress back up to full arm extension.\nAvoid letting your shoulders roll forward at the bottom.\nUse an assisted machine or resistance band if you cannot perform full bodyweight dips."
+            muscles: "Quads, Glutes",
+            instructions: "Set up in a split stance with the bar balanced on your upper back.\nLower straight down while keeping your front foot planted and torso braced.\nDrive through the front leg to stand back up."
         ),
         Preset(
-            name: "Cable Fly",
-            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
-            muscles: "Chest",
-            instructions: "Set both cables at chest height and stand in the center.\nGrip the handles with a slight bend in your elbows.\nBring your hands together in a wide arc in front of your chest.\nSqueeze your chest at the point where your hands meet.\nReturn slowly to the starting position under control.\nAvoid letting your arms travel too far behind your body — stop when you feel a stretch."
+            name: "Bench Press",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Chest, Triceps, Front Delts",
+            instructions: "Set your shoulder blades and feet before unracking the bar.\nLower to your mid-chest with control, then press back up explosively.\nKeep your upper back tight for the whole set."
         ),
         Preset(
             name: "Incline Bench Press",
             category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
             muscles: "Upper Chest, Triceps",
-            instructions: "Set the bench to a 30-45 degree incline.\nLie back and grip the bar slightly wider than shoulder-width.\nUnrack the bar and lower it to your upper chest under control.\nPress the bar back up to full arm extension.\nKeep your shoulder blades retracted and your back against the bench.\nFocus on feeling the upper chest working rather than the front shoulder."
+            instructions: "Use a moderate incline and keep your shoulder blades retracted on the bench.\nLower the bar to your upper chest and press back to lockout.\nAvoid shrugging your shoulders forward."
+        ),
+        Preset(
+            name: "Close-Grip Bench Press",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Triceps, Chest",
+            instructions: "Grip the bar just inside shoulder-width and keep your elbows tucked.\nLower to the lower chest with control and press up while staying tight through the upper back.\nUse a range of motion you can control cleanly."
+        ),
+        Preset(
+            name: "Overhead Press",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Shoulders, Triceps",
+            instructions: "Start with the bar at shoulder height and your core braced.\nPress in a straight line overhead while moving your head slightly back, then through.\nLower smoothly without overextending your lower back."
+        ),
+        Preset(
+            name: "Push Press",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Shoulders, Triceps, Legs",
+            instructions: "Dip a few inches with a vertical torso, then drive powerfully through your legs.\nTransfer that momentum into a strong overhead press.\nFinish with locked-out arms and control the descent."
+        ),
+        Preset(
+            name: "Barbell Row",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Back, Biceps",
+            instructions: "Hinge into a strong torso position and keep your trunk still.\nPull the bar toward your lower ribs by driving your elbows back.\nLower to full extension without losing posture."
+        ),
+        Preset(
+            name: "Pendlay Row",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Back, Lats, Biceps",
+            instructions: "Start each rep from the floor with your torso nearly parallel to the ground.\nRow explosively into your lower chest or upper abdomen.\nSet the bar back down every rep to reset your position."
+        ),
+        Preset(
+            name: "Shrug",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Traps",
+            instructions: "Stand tall with the bar in your hands and arms straight.\nRaise your shoulders straight up toward your ears without rolling them.\nPause briefly, then lower under control."
+        ),
+        Preset(
+            name: "Pull-Up",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Lats, Biceps",
+            instructions: "Start from a dead hang and set your shoulders down before pulling.\nDrive your elbows down to bring your chest toward the bar.\nLower all the way back to a controlled hang."
+        ),
+        Preset(
+            name: "Chin-Up",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Lats, Biceps",
+            instructions: "Use an underhand grip and pull from a full hang with your core braced.\nLead with your chest and elbows until your chin clears the bar.\nLower under control without swinging."
+        ),
+        Preset(
+            name: "Push-Up",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .reps,
+            muscles: "Chest, Triceps, Shoulders",
+            instructions: "Create a straight line from shoulders to heels and brace your core.\nLower your chest toward the floor with elbows at about 45 degrees.\nPress back up without letting your hips sag."
+        ),
+        Preset(
+            name: "Dip",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .reps,
+            muscles: "Chest, Triceps",
+            instructions: "Support yourself on the bars with shoulders packed down.\nLower until your elbows are around ninety degrees, then press back up.\nStay controlled and avoid collapsing at the bottom."
+        ),
+        Preset(
+            name: "Goblet Squat",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Quads, Glutes, Core",
+            instructions: "Hold the dumbbell tight to your chest and keep your elbows close.\nSit down between your hips while staying tall.\nDrive through your whole foot to return to standing."
+        ),
+        Preset(
+            name: "Dumbbell Bench Press",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Chest, Triceps, Front Delts",
+            instructions: "Set your shoulder blades on the bench and hold the dumbbells over your chest.\nLower with control until your upper arms reach a comfortable depth.\nPress back up while keeping both sides even."
+        ),
+        Preset(
+            name: "Incline Dumbbell Press",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Upper Chest, Triceps",
+            instructions: "Use a moderate incline and keep your shoulder blades set.\nLower the dumbbells with control and press them back up over your shoulders.\nKeep your wrists stacked and elbows controlled."
+        ),
+        Preset(
+            name: "Dumbbell Floor Press",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Chest, Triceps",
+            instructions: "Lie on the floor with knees bent and dumbbells over your chest.\nLower until your upper arms touch the floor lightly.\nPress back up while keeping your shoulders stable."
+        ),
+        Preset(
+            name: "Dumbbell Fly",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Chest",
+            instructions: "Press the dumbbells up, then open your arms in a wide arc with a soft elbow bend.\nLower only as far as you can control while keeping tension on the chest.\nBring the dumbbells back together over your chest."
+        ),
+        Preset(
+            name: "Dumbbell Shoulder Press",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Shoulders, Triceps",
+            instructions: "Start with the dumbbells at shoulder height and your core braced.\nPress overhead without flaring your ribs.\nLower back to shoulder level under control."
+        ),
+        Preset(
+            name: "Arnold Press",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Shoulders, Triceps",
+            instructions: "Start with palms facing you at shoulder height.\nRotate your hands outward as you press overhead.\nReverse the path smoothly on the way down."
+        ),
+        Preset(
+            name: "Lateral Raise",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Lateral Delts",
+            instructions: "Lift the dumbbells out to your sides with a soft elbow bend.\nStop around shoulder height and avoid shrugging up.\nLower slowly to keep tension on the delts."
+        ),
+        Preset(
+            name: "Front Raise",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Front Delts",
+            instructions: "Raise the dumbbells forward to shoulder height while keeping your torso still.\nPause briefly without swinging.\nLower under control."
+        ),
+        Preset(
+            name: "Rear Delt Fly",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Rear Delts, Upper Back",
+            instructions: "Hinge forward with a flat back and let the dumbbells hang below you.\nOpen your arms wide, leading with your elbows.\nSqueeze the rear delts, then lower with control."
+        ),
+        Preset(
+            name: "One-Arm Dumbbell Row",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Back, Lats, Biceps",
+            instructions: "Brace one hand on a bench and keep your spine neutral.\nRow the dumbbell toward your hip by driving your elbow back.\nLower fully before the next rep."
+        ),
+        Preset(
+            name: "Chest-Supported Dumbbell Row",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Upper Back, Lats",
+            instructions: "Lie chest-down on an incline bench with dumbbells hanging below you.\nPull your elbows up and back without lifting your chest off the bench.\nLower slowly to a full stretch."
+        ),
+        Preset(
+            name: "Dumbbell Shrug",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Traps",
+            instructions: "Stand tall with the dumbbells at your sides.\nLift your shoulders straight up and pause.\nLower slowly without rolling them."
+        ),
+        Preset(
+            name: "Dumbbell Romanian Deadlift",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Hamstrings, Glutes",
+            instructions: "Hold the dumbbells at your sides and hinge back with soft knees.\nLower along your legs while keeping your spine neutral.\nDrive your hips through to stand tall."
+        ),
+        Preset(
+            name: "Dumbbell Walking Lunge",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Quads, Glutes, Hamstrings",
+            instructions: "Carry the dumbbells at your sides and take a controlled step forward.\nLower into a lunge, then bring the back leg through into the next step.\nStay balanced and upright through the set."
+        ),
+        Preset(
+            name: "Dumbbell Split Squat",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Quads, Glutes",
+            instructions: "Hold the dumbbells at your sides in a split stance.\nLower straight down while keeping pressure through the front foot.\nDrive back up without wobbling."
+        ),
+        Preset(
+            name: "Step-Up",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Quads, Glutes",
+            instructions: "Place one foot fully on the box or bench.\nDrive through that leg to stand up without pushing off the floor too much.\nStep down under control and repeat."
+        ),
+        Preset(
+            name: "Dumbbell Curl",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Biceps",
+            instructions: "Keep your elbows pinned at your sides as you curl the weights.\nSqueeze at the top and lower slowly.\nAvoid swinging your torso."
+        ),
+        Preset(
+            name: "Hammer Curl",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Biceps, Brachialis, Forearms",
+            instructions: "Hold the dumbbells with a neutral grip and keep your elbows still.\nCurl straight up without rotating your hands.\nLower under control."
+        ),
+        Preset(
+            name: "Overhead Triceps Extension",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Triceps",
+            instructions: "Hold a dumbbell overhead with elbows pointing up.\nLower behind your head while keeping your upper arms mostly still.\nExtend back to full lockout."
+        ),
+        Preset(
+            name: "Leg Press",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Quads, Glutes",
+            instructions: "Set your feet firmly on the platform and lower with control until your knees are comfortably bent.\nPress through your full foot to extend the sled.\nDo not slam into lockout at the top."
+        ),
+        Preset(
+            name: "Hack Squat",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Quads, Glutes",
+            instructions: "Set your shoulders under the pads and place your feet in a stable stance.\nLower until you reach a strong squat depth you can control.\nDrive back up through your feet while staying braced."
+        ),
+        Preset(
+            name: "Smith Machine Squat",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Quads, Glutes",
+            instructions: "Position your feet so the fixed bar path still allows a balanced squat.\nDescend with control and keep your torso braced.\nStand back up without bouncing off the bottom."
+        ),
+        Preset(
+            name: "Smith Machine Bench Press",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Chest, Triceps",
+            instructions: "Set the bench so the fixed path aligns with your pressing groove.\nLower with control to your chest and press back to full extension.\nKeep your shoulders pinned to the bench."
+        ),
+        Preset(
+            name: "Smith Machine Incline Press",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Upper Chest, Triceps",
+            instructions: "Use a modest incline and align the bench to the Smith path.\nLower to your upper chest, then press back up smoothly.\nStay tight through your upper back."
+        ),
+        Preset(
+            name: "Leg Curl",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Hamstrings",
+            instructions: "Set the pad just above your heels and keep your hips stable.\nCurl smoothly through a full range without jerking.\nLower under control to keep tension on the hamstrings."
+        ),
+        Preset(
+            name: "Leg Extension",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Quads",
+            instructions: "Sit tall with the machine aligned to your knee joint.\nExtend your legs until your quads contract hard, then lower with control.\nAvoid snapping into lockout."
+        ),
+        Preset(
+            name: "Chest Press",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Chest, Triceps",
+            instructions: "Adjust the seat so the handles line up with your chest.\nPress smoothly until your arms are nearly straight, then return under control.\nKeep your shoulders down and back."
+        ),
+        Preset(
+            name: "Incline Chest Press",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Upper Chest, Triceps",
+            instructions: "Set the seat so the handles start near your upper chest.\nPress evenly through both arms and lower slowly.\nStay pinned to the pad throughout."
+        ),
+        Preset(
+            name: "Pec Deck",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Chest",
+            instructions: "Set the seat so your elbows stay level with the machine arms.\nBring your forearms or hands together in front of your chest.\nOpen back up slowly without overstretching."
+        ),
+        Preset(
+            name: "Rear Delt Machine",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Rear Delts, Upper Back",
+            instructions: "Sit tall against the pad and grip the rear-delt handles.\nOpen your arms by driving the elbows back and out.\nReturn slowly to the start."
+        ),
+        Preset(
+            name: "Lat Pulldown",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Lats, Biceps",
+            instructions: "Secure your thighs and start from a long overhead reach.\nPull the bar toward your upper chest by driving your elbows down.\nControl the return all the way up."
+        ),
+        Preset(
+            name: "Seated Cable Row",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Back, Biceps",
+            instructions: "Sit tall with a neutral spine and reach forward to a full stretch.\nRow the handle toward your lower ribs by driving your elbows back.\nReturn slowly without rounding your back."
+        ),
+        Preset(
+            name: "High Row Machine",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Upper Back, Lats",
+            instructions: "Start with a full reach and chest supported if available.\nDrive your elbows down and back in the machine’s path.\nLower slowly to keep tension in the upper back."
+        ),
+        Preset(
+            name: "Assisted Pull-Up",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .reps,
+            muscles: "Lats, Biceps",
+            instructions: "Set the assistance so you can move through a full range of motion.\nPull with your back and arms until your chin clears the bar.\nLower all the way back to the bottom under control."
+        ),
+        Preset(
+            name: "Shoulder Press",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Shoulders, Triceps",
+            instructions: "Set the handles to shoulder level and keep your back against the pad.\nPress overhead smoothly and lower with control.\nAvoid arching your lower back to finish reps."
+        ),
+        Preset(
+            name: "Bicep Curl",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Biceps",
+            instructions: "Set the machine or cable so your elbows stay planted in the same position.\nCurl through a full range and squeeze the biceps at the top.\nLower slowly without letting the weight yank you down."
+        ),
+        Preset(
+            name: "Triceps Pushdown",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Triceps",
+            instructions: "Pin your elbows to your sides and press the attachment down to full extension.\nPause briefly, then return under control.\nKeep your torso steady and avoid swinging."
+        ),
+        Preset(
+            name: "Cable Chest Fly",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Chest",
+            instructions: "Set the pulleys around chest height and take a staggered stance.\nBring the handles together in a wide arc while keeping a soft elbow bend.\nReturn slowly until you feel a controlled stretch."
+        ),
+        Preset(
+            name: "Cable Row",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Back, Lats, Biceps",
+            instructions: "Set your torso tall and pull the cable handle toward your torso.\nDrive your elbow back and squeeze through the upper back.\nReturn to a full stretch under control."
+        ),
+        Preset(
+            name: "Face Pull",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Rear Delts, Rotator Cuff",
+            instructions: "Set the rope at face height and pull toward your forehead with elbows high.\nSeparate the rope as you finish to engage the rear delts and upper back.\nReturn slowly without losing posture."
+        ),
+        Preset(
+            name: "Straight-Arm Pulldown",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Lats",
+            instructions: "Stand tall with arms extended on a high cable attachment.\nPull down in an arc toward your thighs without bending your elbows much.\nReturn slowly to the overhead start."
+        ),
+        Preset(
+            name: "Cable Lateral Raise",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Lateral Delts",
+            instructions: "Use the low pulley and raise your arm out to the side with a soft elbow.\nLift to shoulder height without shrugging.\nLower slowly to keep continuous tension."
+        ),
+        Preset(
+            name: "Cable Curl",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Biceps",
+            instructions: "Set the cable low and keep your elbows by your sides.\nCurl smoothly to your shoulders and squeeze at the top.\nLower slowly without leaning back."
+        ),
+        Preset(
+            name: "Rope Hammer Curl",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Biceps, Forearms",
+            instructions: "Use a rope on the low cable and keep your palms facing each other.\nCurl with your elbows pinned in place and squeeze at the top.\nLower with control."
+        ),
+        Preset(
+            name: "Overhead Cable Triceps Extension",
+            category: .strength, icon: "dumbbell.fill", metric: .weightReps,
+            muscles: "Triceps",
+            instructions: "Face away from the cable and keep your elbows pointing forward.\nExtend your arms until straight, then bend them back with control.\nKeep the upper arms mostly fixed."
+        ),
+        Preset(
+            name: "Cable Crunch",
+            category: .strength, icon: "figure.core.training", metric: .reps,
+            muscles: "Core",
+            instructions: "Kneel facing the cable and hold the rope near your temples.\nCrunch your ribs toward your hips while keeping your hips mostly still.\nReturn under control to a long spine."
+        ),
+        Preset(
+            name: "Pallof Press",
+            category: .strength, icon: "figure.core.training", metric: .reps,
+            muscles: "Core, Obliques",
+            instructions: "Stand side-on to the cable and hold the handle at your chest.\nPress straight out without letting your torso rotate.\nPause, then bring the handle back in under control."
+        ),
+        Preset(
+            name: "Glute Cable Kickback",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Glutes",
+            instructions: "Attach the cable to your ankle and brace onto a stable support.\nDrive your leg back by squeezing the glute without arching your lower back.\nReturn slowly to the start."
+        ),
+        Preset(
+            name: "Hip Abduction",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Glute Medius, Glutes",
+            instructions: "Sit tall in the machine and press your knees outward against the pads.\nPause briefly at the end range.\nReturn slowly without letting the stack slam."
+        ),
+        Preset(
+            name: "Hip Adduction",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Adductors",
+            instructions: "Sit tall and bring your legs together against the pads.\nSqueeze at the midpoint, then return with control.\nKeep your torso steady."
+        ),
+        Preset(
+            name: "Calf Raise Machine",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
+            muscles: "Calves",
+            instructions: "Press through the balls of your feet to rise onto your toes.\nPause at the top for a strong calf contraction.\nLower to a full stretch under control."
+        ),
+        Preset(
+            name: "Bodyweight Squat",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .reps,
+            muscles: "Quads, Glutes",
+            instructions: "Stand with feet shoulder-width apart and brace your core.\nSit down between your hips while keeping your chest tall.\nStand back up through your whole foot."
+        ),
+        Preset(
+            name: "Bulgarian Split Squat",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .reps,
+            muscles: "Quads, Glutes",
+            instructions: "Place your back foot on a bench and keep most of your weight on the front leg.\nLower with control until the front thigh is near parallel.\nDrive back up through the front foot."
+        ),
+        Preset(
+            name: "Glute Bridge",
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .reps,
+            muscles: "Glutes, Hamstrings",
+            instructions: "Lie on your back with knees bent and feet planted.\nDrive your hips up by squeezing your glutes.\nLower under control without resting fully between reps."
+        ),
+        Preset(
+            name: "Plank",
+            category: .strength, icon: "figure.core.training", metric: .duration,
+            muscles: "Core",
+            instructions: "Set your elbows under your shoulders and make a straight line from head to heels.\nBrace your abs and glutes hard.\nHold steady without letting your hips sag."
+        ),
+        Preset(
+            name: "Hanging Leg Raise",
+            category: .strength, icon: "figure.core.training", metric: .reps,
+            muscles: "Core, Hip Flexors",
+            instructions: "Hang from the bar and keep your torso as still as possible.\nRaise your legs by bracing your abs rather than swinging.\nLower slowly to the start."
         ),
 
         // MARK: - Cardio
@@ -340,12 +658,11 @@ struct ActivitySeeder {
     static func seedIfNeeded(context: NSManagedObjectContext) {
         let req = CDActivity.fetchRequest()
         req.predicate = NSPredicate(format: "isPreset == true")
-        guard (try? context.count(for: req)) == 0 else {
-            updateInstructionsIfNeeded(context: context)
-            return
-        }
+        let existingPresets = (try? context.fetch(req)) ?? []
+        let existingNames = Set(existingPresets.map(\.name))
 
-        for preset in presets {
+        var insertedAny = false
+        for preset in presets where !existingNames.contains(preset.name) {
             let activity = CDActivity(context: context)
             activity.id = UUID()
             activity.name = preset.name
@@ -356,9 +673,14 @@ struct ActivitySeeder {
             activity.instructions = preset.instructions
             activity.isPreset = true
             activity.createdAt = Date()
+            insertedAny = true
         }
 
-        try? context.save()
+        if insertedAny {
+            try? context.save()
+        }
+
+        updateInstructionsIfNeeded(context: context)
     }
 
     /// Removes duplicate preset activities that CloudKit sync can introduce after a reinstall.

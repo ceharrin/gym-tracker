@@ -87,6 +87,56 @@ final class CDActivityHelpersTests: XCTestCase {
         XCTAssertEqual(a.activityCategory, .custom)
     }
 
+    // MARK: - strengthEquipmentGroup
+
+    func test_strengthEquipmentGroup_barbellPreset() {
+        let a = makeActivity()
+        a.name = "Back Squat"
+        a.isPreset = true
+
+        XCTAssertEqual(a.strengthEquipmentGroup, .barbell)
+    }
+
+    func test_strengthEquipmentGroup_dumbbellPreset() {
+        let a = makeActivity()
+        a.name = "Dumbbell Bench Press"
+        a.isPreset = true
+
+        XCTAssertEqual(a.strengthEquipmentGroup, .dumbbell)
+    }
+
+    func test_strengthEquipmentGroup_machinePreset() {
+        let a = makeActivity()
+        a.name = "Leg Press"
+        a.isPreset = true
+
+        XCTAssertEqual(a.strengthEquipmentGroup, .machine)
+    }
+
+    func test_strengthEquipmentGroup_cablePreset() {
+        let a = makeActivity()
+        a.name = "Cable Row"
+        a.isPreset = true
+
+        XCTAssertEqual(a.strengthEquipmentGroup, .cable)
+    }
+
+    func test_strengthEquipmentGroup_bodyweightPreset() {
+        let a = makeActivity(metric: .reps)
+        a.name = "Push-Up"
+        a.isPreset = true
+
+        XCTAssertEqual(a.strengthEquipmentGroup, .bodyweightCore)
+    }
+
+    func test_strengthEquipmentGroup_customStrengthFallsIntoCustomBucket() {
+        let a = makeActivity(metric: .reps)
+        a.name = "My Strength Move"
+        a.isPreset = false
+
+        XCTAssertEqual(a.strengthEquipmentGroup, .customStrength)
+    }
+
     // MARK: - metric
 
     func test_metric_weightReps() {

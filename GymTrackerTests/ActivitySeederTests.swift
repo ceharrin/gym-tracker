@@ -32,6 +32,28 @@ final class ActivitySeederTests: XCTestCase {
         XCTAssertEqual(results.count, ActivitySeeder.presets.count)
     }
 
+    func test_seedIfNeeded_addsMissingPresetsToExistingLibrary() throws {
+        let existing = CDActivity(context: context)
+        existing.id = UUID()
+        existing.name = "Back Squat"
+        existing.category = ActivityCategory.strength.rawValue
+        existing.icon = "figure.strengthtraining.traditional"
+        existing.primaryMetric = PrimaryMetric.weightReps.rawValue
+        existing.isPreset = true
+        existing.createdAt = Date()
+        existing.instructions = "Existing instructions"
+        try context.save()
+
+        ActivitySeeder.seedIfNeeded(context: context)
+
+        let request = CDActivity.fetchRequest()
+        request.predicate = NSPredicate(format: "isPreset == true")
+        let results = try context.fetch(request)
+
+        XCTAssertEqual(results.count, ActivitySeeder.presets.count)
+        XCTAssertEqual(results.filter { $0.name == "Back Squat" }.count, 1)
+    }
+
     func test_seedIfNeeded_seedsPresetsEvenWhenCustomActivitiesExist() throws {
         let custom = CDActivity(context: context)
         custom.id = UUID()
@@ -56,7 +78,7 @@ final class ActivitySeederTests: XCTestCase {
         ActivitySeeder.seedIfNeeded(context: context)
 
         let request = CDActivity.fetchRequest()
-        request.predicate = NSPredicate(format: "name == %@", "Squat")
+        request.predicate = NSPredicate(format: "name == %@", "Back Squat")
         let squat = try XCTUnwrap(context.fetch(request).first)
 
         XCTAssertEqual(squat.category, ActivityCategory.strength.rawValue)
@@ -72,7 +94,7 @@ final class ActivitySeederTests: XCTestCase {
         ActivitySeeder.seedIfNeeded(context: context)
 
         let request = CDActivity.fetchRequest()
-        request.predicate = NSPredicate(format: "name == %@", "Squat")
+        request.predicate = NSPredicate(format: "name == %@", "Back Squat")
         let squat = try XCTUnwrap(context.fetch(request).first)
 
         XCTAssertNotNil(squat.instructions)
@@ -89,10 +111,24 @@ final class ActivitySeederTests: XCTestCase {
         XCTAssertTrue(missing.isEmpty, "Presets missing instructions: \(missing.map(\.name).joined(separator: ", "))")
     }
 
+    func test_seedIfNeeded_strengthCatalogCoversBarbellDumbbellMachineCableAndBodyweight() throws {
+        ActivitySeeder.seedIfNeeded(context: context)
+
+        let request = CDActivity.fetchRequest()
+        request.predicate = NSPredicate(format: "isPreset == true AND category == %@", ActivityCategory.strength.rawValue)
+        let names = Set(try context.fetch(request).map(\.name))
+
+        XCTAssertTrue(names.contains("Back Squat"))
+        XCTAssertTrue(names.contains("Dumbbell Bench Press"))
+        XCTAssertTrue(names.contains("Leg Press"))
+        XCTAssertTrue(names.contains("Cable Row"))
+        XCTAssertTrue(names.contains("Push-Up"))
+    }
+
     func test_updateInstructionsIfNeeded_fillsNilInstructions() throws {
         let activity = CDActivity(context: context)
         activity.id = UUID()
-        activity.name = "Squat"
+        activity.name = "Back Squat"
         activity.category = ActivityCategory.strength.rawValue
         activity.icon = "figure.strengthtraining.traditional"
         activity.primaryMetric = PrimaryMetric.weightReps.rawValue
@@ -104,7 +140,7 @@ final class ActivitySeederTests: XCTestCase {
         ActivitySeeder.updateInstructionsIfNeeded(context: context)
 
         let request = CDActivity.fetchRequest()
-        request.predicate = NSPredicate(format: "name == %@", "Squat")
+        request.predicate = NSPredicate(format: "name == %@", "Back Squat")
         let squat = try XCTUnwrap(context.fetch(request).first)
 
         XCTAssertNotNil(squat.instructions)
@@ -126,7 +162,7 @@ final class ActivitySeederTests: XCTestCase {
     }
 
     func test_deduplicatePresets_noDuplicates_noChanges() throws {
-        makePreset(name: "Squat")
+        makePreset(name: "Back Squat")
         makePreset(name: "Deadlift")
         try context.save()
 
@@ -137,35 +173,35 @@ final class ActivitySeederTests: XCTestCase {
     }
 
     func test_deduplicatePresets_removesExtraCopies() throws {
-        let older = makePreset(name: "Squat", createdAt: Date(timeIntervalSinceReferenceDate: 1000))
-        let newer = makePreset(name: "Squat", createdAt: Date(timeIntervalSinceReferenceDate: 2000))
+        let older = makePreset(name: "Back Squat", createdAt: Date(timeIntervalSinceReferenceDate: 1000))
+        let newer = makePreset(name: "Back Squat", createdAt: Date(timeIntervalSinceReferenceDate: 2000))
         try context.save()
         _ = older; _ = newer
 
         ActivitySeeder.deduplicatePresets(context: context)
 
         let req = CDActivity.fetchRequest()
-        req.predicate = NSPredicate(format: "name == %@", "Squat")
+        req.predicate = NSPredicate(format: "name == %@", "Back Squat")
         let remaining = try context.fetch(req)
-        XCTAssertEqual(remaining.count, 1, "Exactly one Squat should remain after deduplication")
+        XCTAssertEqual(remaining.count, 1, "Exactly one Back Squat should remain after deduplication")
     }
 
     func test_deduplicatePresets_keepsOldestByCreatedAt() throws {
-        let older = makePreset(name: "Squat", createdAt: Date(timeIntervalSinceReferenceDate: 1000))
-        makePreset(name: "Squat", createdAt: Date(timeIntervalSinceReferenceDate: 2000))
+        let older = makePreset(name: "Back Squat", createdAt: Date(timeIntervalSinceReferenceDate: 1000))
+        makePreset(name: "Back Squat", createdAt: Date(timeIntervalSinceReferenceDate: 2000))
         try context.save()
 
         ActivitySeeder.deduplicatePresets(context: context)
 
         let req = CDActivity.fetchRequest()
-        req.predicate = NSPredicate(format: "name == %@", "Squat")
+        req.predicate = NSPredicate(format: "name == %@", "Back Squat")
         let remaining = try XCTUnwrap(try context.fetch(req).first)
         XCTAssertEqual(remaining.objectID, older.objectID, "The oldest preset should be the survivor")
     }
 
     func test_deduplicatePresets_migratesWorkoutEntriesToSurvivor() throws {
-        let older = makePreset(name: "Squat", createdAt: Date(timeIntervalSinceReferenceDate: 1000))
-        let newer = makePreset(name: "Squat", createdAt: Date(timeIntervalSinceReferenceDate: 2000))
+        let older = makePreset(name: "Back Squat", createdAt: Date(timeIntervalSinceReferenceDate: 1000))
+        let newer = makePreset(name: "Back Squat", createdAt: Date(timeIntervalSinceReferenceDate: 2000))
 
         let workout = CDWorkout(context: context)
         workout.id = UUID()
@@ -205,8 +241,8 @@ final class ActivitySeederTests: XCTestCase {
     }
 
     func test_deduplicatePresets_isIdempotent() throws {
-        makePreset(name: "Squat", createdAt: Date(timeIntervalSinceReferenceDate: 1000))
-        makePreset(name: "Squat", createdAt: Date(timeIntervalSinceReferenceDate: 2000))
+        makePreset(name: "Back Squat", createdAt: Date(timeIntervalSinceReferenceDate: 1000))
+        makePreset(name: "Back Squat", createdAt: Date(timeIntervalSinceReferenceDate: 2000))
         makePreset(name: "Deadlift")
         try context.save()
 
@@ -222,7 +258,7 @@ final class ActivitySeederTests: XCTestCase {
     func test_updateInstructionsIfNeeded_doesNotOverwriteExistingInstructions() throws {
         let activity = CDActivity(context: context)
         activity.id = UUID()
-        activity.name = "Squat"
+        activity.name = "Back Squat"
         activity.category = ActivityCategory.strength.rawValue
         activity.icon = "figure.strengthtraining.traditional"
         activity.primaryMetric = PrimaryMetric.weightReps.rawValue
@@ -234,7 +270,7 @@ final class ActivitySeederTests: XCTestCase {
         ActivitySeeder.updateInstructionsIfNeeded(context: context)
 
         let request = CDActivity.fetchRequest()
-        request.predicate = NSPredicate(format: "name == %@", "Squat")
+        request.predicate = NSPredicate(format: "name == %@", "Back Squat")
         let squat = try XCTUnwrap(context.fetch(request).first)
 
         XCTAssertEqual(squat.instructions, "My custom instructions")
