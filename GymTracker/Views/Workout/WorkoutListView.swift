@@ -19,19 +19,36 @@ struct WorkoutListView: View {
     @State private var showingCSVExportOptions = false
     @State private var csvExportStartDate = Date()
     @State private var csvExportEndDate = Date()
+    @State private var visibleWorkoutCount = WorkoutHistoryDisplayPolicy.initialVisibleCount
 
-    private var filtered: [CDWorkout] {
-        guard !searchText.isEmpty else { return Array(workouts) }
-        return workouts.filter {
-            $0.title.localizedCaseInsensitiveContains(searchText) ||
-            $0.activitySummary.localizedCaseInsensitiveContains(searchText)
-        }
+    private var visibleWorkouts: [CDWorkout] {
+        WorkoutHistoryDisplayPolicy.visibleWorkouts(
+            from: Array(workouts),
+            searchText: searchText,
+            visibleCount: visibleWorkoutCount
+        )
+    }
+
+    private var isSearching: Bool {
+        !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    private var shouldShowLoadMore: Bool {
+        WorkoutHistoryDisplayPolicy.shouldShowLoadMore(
+            totalCount: workouts.count,
+            visibleCount: visibleWorkoutCount,
+            searchText: searchText
+        )
+    }
+
+    private var remainingWorkoutCount: Int {
+        max(workouts.count - visibleWorkouts.count, 0)
     }
 
     private var grouped: [(String, [CDWorkout])] {
         let fmt = DateFormatter()
         fmt.dateFormat = "MMMM yyyy"
-        let dict = Dictionary(grouping: filtered) { fmt.string(from: $0.date) }
+        let dict = Dictionary(grouping: visibleWorkouts) { fmt.string(from: $0.date) }
         return dict.sorted { $0.key > $1.key }.map { ($0.key, $0.value.sorted { $0.date > $1.date }) }
     }
 
@@ -63,6 +80,25 @@ struct WorkoutListView: View {
                                         .foregroundStyle(GymTheme.steel)
                                 }
                             }
+
+                            if shouldShowLoadMore {
+                                Section {
+                                    Button {
+                                        visibleWorkoutCount = WorkoutHistoryDisplayPolicy.nextVisibleCount(
+                                            currentVisibleCount: visibleWorkoutCount,
+                                            totalCount: workouts.count
+                                        )
+                                    } label: {
+                                        HStack {
+                                            Spacer()
+                                            Text("Show Older Workouts (\(remainingWorkoutCount) more)")
+                                                .fontWeight(.semibold)
+                                            Spacer()
+                                        }
+                                    }
+                                    .foregroundStyle(GymTheme.electricBlue)
+                                }
+                            }
                         }
                         .scrollContentBackground(.hidden)
                         .listStyle(.insetGrouped)
@@ -75,6 +111,11 @@ struct WorkoutListView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbarBackground(Color.white.opacity(0.92), for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
+            .safeAreaInset(edge: .top) {
+                if !workouts.isEmpty && !isSearching {
+                    historyStatusBanner
+                }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     if !workouts.isEmpty {
@@ -148,6 +189,24 @@ struct WorkoutListView: View {
             }
                 .buttonStyle(.borderedProminent)
                 .tint(GymTheme.electricBlue)
+        }
+    }
+
+    private var historyStatusBanner: some View {
+        Group {
+            if shouldShowLoadMore {
+                Text("Showing \(visibleWorkouts.count) most recent workouts")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(GymTheme.steel)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(
+                        Capsule()
+                            .fill(Color.white.opacity(0.9))
+                    )
+                    .padding(.top, 6)
+            }
         }
     }
 
