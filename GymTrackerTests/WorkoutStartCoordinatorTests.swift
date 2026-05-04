@@ -103,4 +103,36 @@ final class WorkoutStartCoordinatorTests: XCTestCase {
 
         XCTAssertEqual(WorkoutNavigationMode.initialMode(for: workout), .detail)
     }
+
+    func test_completionState_marksExistingWorkoutCompletedWhenSessionJustCompleted() {
+        let workout = makeWorkout(
+            title: "In Progress",
+            date: Date(timeIntervalSinceReferenceDate: 100),
+            isCompleted: false
+        )
+
+        XCTAssertTrue(
+            LogWorkoutView.isWorkoutCompleted(
+                existingWorkout: workout,
+                isDuplicate: false,
+                completedDuringSession: true
+            )
+        )
+    }
+
+    func test_completionState_keepsDuplicateWorkoutEditable() {
+        let workout = makeWorkout(
+            title: "Completed Source",
+            date: Date(timeIntervalSinceReferenceDate: 100),
+            isCompleted: true
+        )
+
+        XCTAssertFalse(
+            LogWorkoutView.isWorkoutCompleted(
+                existingWorkout: workout,
+                isDuplicate: true,
+                completedDuringSession: false
+            )
+        )
+    }
 }

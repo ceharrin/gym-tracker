@@ -23,6 +23,8 @@ struct LogWorkoutView: View {
     @State private var confirmedPRs: [String] = []
     @State private var showingCelebration = false
     @State private var saveError: String? = nil
+    @State private var completedDuringSession = false
+    @State private var completedDurationMinutes: Int32? = nil
 
     var body: some View {
         NavigationStack {
@@ -116,7 +118,9 @@ struct LogWorkoutView: View {
             .fullScreenCover(isPresented: $showingCelebration) {
                 PRCelebrationView(activityNames: confirmedPRs) {
                     showingCelebration = false
-                    dismiss()
+                    DispatchQueue.main.async {
+                        dismiss()
+                    }
                 }
             }
             .alert("Couldn't Save Workout", isPresented: Binding(
@@ -161,6 +165,11 @@ struct LogWorkoutView: View {
             return
         }
 
+        if intent == .complete {
+            completedDuringSession = true
+            completedDurationMinutes = result.savedWorkout.durationMinutes
+        }
+
         if intent == .saveProgress || result.newPRNames.isEmpty {
             dismiss()
         } else {
@@ -190,18 +199,16 @@ struct LogWorkoutView: View {
     }
 
     private var durationText: String {
-        if let existingWorkout, existingWorkout.isCompleted, !isDuplicate {
-            return existingWorkout.durationMinutes > 0 ? "\(existingWorkout.durationMinutes) min" : "0 min"
+        if isEffectivelyCompleted {
+            let minutes = Int(completedDurationMinutes ?? existingWorkout?.durationMinutes ?? 0)
+            return "\(minutes) min"
         }
         let elapsed = max(0, Int(Date().timeIntervalSince(startTime) / 60))
         return "\(elapsed) min"
     }
 
     private var workoutStatusText: String? {
-        if let existingWorkout, !existingWorkout.isCompleted, !isDuplicate {
-            return "Workout in progress"
-        }
-        return nil
+        isEffectivelyCompleted ? nil : "Workout in progress"
     }
 
     private func resolvedStartTime(now: Date) -> Date {
@@ -211,10 +218,27 @@ struct LogWorkoutView: View {
     }
 
     private var showsSaveProgressButton: Bool {
-        existingWorkout?.isCompleted != true || isDuplicate
+        !isEffectivelyCompleted
     }
 
     private var primarySaveButtonTitle: String {
-        existingWorkout?.isCompleted == true && !isDuplicate ? "Save Changes" : "Complete Workout"
+        isEffectivelyCompleted && !isDuplicate ? "Save Changes" : "Complete Workout"
+    }
+
+    private var isEffectivelyCompleted: Bool {
+        Self.isWorkoutCompleted(
+            existingWorkout: existingWorkout,
+            isDuplicate: isDuplicate,
+            completedDuringSession: completedDuringSession
+        )
+    }
+
+    static func isWorkoutCompleted(
+        existingWorkout: CDWorkout?,
+        isDuplicate: Bool,
+        completedDuringSession: Bool
+    ) -> Bool {
+        guard !isDuplicate else { return false }
+        return completedDuringSession || existingWorkout?.isCompleted == true
     }
 }
