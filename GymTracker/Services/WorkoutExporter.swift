@@ -76,7 +76,7 @@ enum WorkoutExporter {
 
         let sorted = workouts.sorted { $0.date > $1.date }
         for workout in sorted {
-            let date = dateFormatter.string(from: workout.date)
+            let date = csvEscape(dateFormatter.string(from: workout.date))
             let workoutTitle = csvEscape(workout.title)
             for entry in workout.sortedEntries {
                 guard let activity = entry.activity else { continue }

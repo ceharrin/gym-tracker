@@ -60,6 +60,37 @@ final class WorkoutExporterTests: XCTestCase {
         s.entry = e
     }
 
+    private func parseCSVLine(_ line: String) -> [String] {
+        var values: [String] = []
+        var current = ""
+        var isInsideQuotes = false
+        let characters = Array(line)
+        var index = 0
+
+        while index < characters.count {
+            let character = characters[index]
+            if character == "\"" {
+                if isInsideQuotes,
+                   index + 1 < characters.count,
+                   characters[index + 1] == "\"" {
+                    current.append("\"")
+                    index += 1
+                } else {
+                    isInsideQuotes.toggle()
+                }
+            } else if character == "," && !isInsideQuotes {
+                values.append(current)
+                current = ""
+            } else {
+                current.append(character)
+            }
+            index += 1
+        }
+
+        values.append(current)
+        return values
+    }
+
     // MARK: - File creation
 
     func test_exportHTML_createsFile() throws {
@@ -295,6 +326,40 @@ final class WorkoutExporterTests: XCTestCase {
         let lines = csv.components(separatedBy: "\n").filter { !$0.isEmpty }
         XCTAssertTrue(lines[1].contains("New Workout"), "Newest workout must appear first in CSV")
         XCTAssertTrue(lines[2].contains("Old Workout"), "Older workout must appear second in CSV")
+    }
+
+    func test_buildCSV_dateWithComma_isQuotedSoColumnsStayAligned() {
+        Units._testOverrideIsMetric = false
+        defer { Units._testOverrideIsMetric = nil }
+
+        let workoutDate = Calendar.current.date(from: DateComponents(year: 2026, month: 5, day: 4))!
+        let workout = makeFullWorkout(title: "Monday Workout", date: workoutDate, activityName: "Seated Row")
+
+        let csv = WorkoutExporter.buildCSV(for: [workout])
+        let lines = csv.components(separatedBy: "\n").filter { !$0.isEmpty }
+        let row = parseCSVLine(lines[1])
+
+        XCTAssertEqual(row[0], "May 4, 2026")
+        XCTAssertEqual(row[1], "Monday Workout")
+        XCTAssertEqual(row[2], "Seated Row")
+        XCTAssertEqual(row[3], "strength")
+        XCTAssertEqual(row[4], "1")
+    }
+
+    func test_buildCSV_dataRowColumnCount_matchesHeaderColumnCount() {
+        Units._testOverrideIsMetric = false
+        defer { Units._testOverrideIsMetric = nil }
+
+        let workoutDate = Calendar.current.date(from: DateComponents(year: 2026, month: 5, day: 4))!
+        let workout = makeFullWorkout(title: "Monday Workout", date: workoutDate, activityName: "Seated Row")
+
+        let csv = WorkoutExporter.buildCSV(for: [workout])
+        let lines = csv.components(separatedBy: "\n").filter { !$0.isEmpty }
+        let headerColumns = parseCSVLine(lines[0])
+        let dataColumns = parseCSVLine(lines[1])
+
+        XCTAssertEqual(dataColumns.count, headerColumns.count,
+                       "Every data row must have the same number of columns as the CSV header")
     }
 
     func test_exportCSV_createsFile() throws {
