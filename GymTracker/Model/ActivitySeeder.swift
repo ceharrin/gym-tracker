@@ -361,6 +361,38 @@ struct ActivitySeeder {
         try? context.save()
     }
 
+    /// Removes duplicate preset activities that CloudKit sync can introduce after a reinstall.
+    /// When duplicates are found, all workout-entry references are migrated to the oldest
+    /// copy (by createdAt) before the extras are deleted.
+    static func deduplicatePresets(context: NSManagedObjectContext) {
+        let req = CDActivity.fetchRequest()
+        req.predicate = NSPredicate(format: "isPreset == true")
+        req.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: true)]
+
+        guard let activities = try? context.fetch(req) else { return }
+
+        var seen: [String: CDActivity] = [:]
+        var duplicates: [CDActivity] = []
+
+        for activity in activities {
+            let key = activity.name
+            if let survivor = seen[key] {
+                if let entries = activity.entries as? Set<CDWorkoutEntry> {
+                    for entry in entries {
+                        entry.activity = survivor
+                    }
+                }
+                duplicates.append(activity)
+            } else {
+                seen[key] = activity
+            }
+        }
+
+        guard !duplicates.isEmpty else { return }
+        duplicates.forEach { context.delete($0) }
+        try? context.save()
+    }
+
     static func updateInstructionsIfNeeded(context: NSManagedObjectContext) {
         let req = CDActivity.fetchRequest()
         req.predicate = NSPredicate(format: "isPreset == true AND instructions == nil")

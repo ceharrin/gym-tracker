@@ -59,6 +59,21 @@ struct PersistenceController {
         if !inMemory {
             ensureProfileExists()
             ActivitySeeder.seedIfNeeded(context: container.viewContext)
+            ActivitySeeder.deduplicatePresets(context: container.viewContext)
+            observeRemoteChanges()
+        }
+    }
+
+    private func observeRemoteChanges() {
+        NotificationCenter.default.addObserver(
+            forName: .NSPersistentStoreRemoteChange,
+            object: container.persistentStoreCoordinator,
+            queue: .main
+        ) { [weak container] _ in
+            guard let ctx = container?.viewContext else { return }
+            ctx.perform {
+                ActivitySeeder.deduplicatePresets(context: ctx)
+            }
         }
     }
 
