@@ -48,6 +48,62 @@ enum WorkoutExporter {
         }
     }
 
+    // MARK: CSV export
+
+    /// Produces a CSV file containing every set from every supplied workout and returns its URL.
+    static func exportCSV(for workouts: [CDWorkout], directory: URL? = nil) throws -> URL {
+        let dir = try directory ?? defaultExportDirectory()
+        let filename = "GymTracker-Workouts-\(UUID().uuidString).csv"
+        let destinationURL = dir.appendingPathComponent(filename)
+
+        let csv = buildCSV(for: workouts)
+        do {
+            try csv.write(to: destinationURL, atomically: true, encoding: .utf8)
+            return destinationURL
+        } catch {
+            throw ExportError.writeFailure(error)
+        }
+    }
+
+    static func buildCSV(for workouts: [CDWorkout]) -> String {
+        let dateFormatter = DateFormatter()
+        dateFormatter.dateStyle = .medium
+        dateFormatter.timeStyle = .none
+
+        var rows: [String] = [
+            "Date,Workout,Exercise,Category,Set,\(Units.weightUnit),Reps,\(Units.distanceUnit),Duration,Laps,Custom Value,Custom Label,PR Attempt"
+        ]
+
+        let sorted = workouts.sorted { $0.date > $1.date }
+        for workout in sorted {
+            let date = dateFormatter.string(from: workout.date)
+            let workoutTitle = csvEscape(workout.title)
+            for entry in workout.sortedEntries {
+                guard let activity = entry.activity else { continue }
+                let exercise = csvEscape(activity.name)
+                let category = csvEscape(activity.activityCategory.rawValue)
+                for set in entry.sortedSets {
+                    let weight = set.weightKg > 0 ? String(format: "%.2f", Units.weightValue(fromKg: set.weightKg)) : ""
+                    let reps   = set.reps > 0 ? "\(set.reps)" : ""
+                    let dist   = set.distanceMeters > 0 ? String(format: "%.2f", Units.distanceValue(fromMeters: set.distanceMeters)) : ""
+                    let dur    = set.durationSeconds > 0 ? set.formattedDuration : ""
+                    let laps   = set.laps > 0 ? "\(set.laps)" : ""
+                    let cv     = set.customValue > 0 ? String(format: "%.2f", set.customValue) : ""
+                    let cl     = csvEscape(set.customLabel ?? "")
+                    let pr     = set.isPRAttempt ? "true" : ""
+                    rows.append("\(date),\(workoutTitle),\(exercise),\(category),\(set.setNumber),\(weight),\(reps),\(dist),\(dur),\(laps),\(cv),\(cl),\(pr)")
+                }
+            }
+        }
+        return rows.joined(separator: "\n")
+    }
+
+    private static func csvEscape(_ value: String) -> String {
+        let needsQuoting = value.contains(",") || value.contains("\"") || value.contains("\n")
+        guard needsQuoting else { return value }
+        return "\"\(value.replacingOccurrences(of: "\"", with: "\"\""))\""
+    }
+
     // MARK: Private
 
     /// Converts a workout title to a safe filename with a `.pdf` extension.

@@ -199,4 +199,126 @@ final class WorkoutExporterTests: XCTestCase {
         XCTAssertFalse(exportError.errorDescription?.isEmpty ?? true,
                        "renderFailure must provide a non-empty localized description")
     }
+
+    // MARK: - CSV export (buildCSV)
+
+    private func makeFullWorkout(
+        title: String = "Leg Day",
+        date: Date = Date(),
+        activityName: String = "Squat",
+        metric: PrimaryMetric = .weightReps,
+        sets: [(weightKg: Double, reps: Int32, isPR: Bool)] = [(100, 5, false)]
+    ) -> CDWorkout {
+        let w = CDWorkout(context: context)
+        w.id = UUID(); w.title = title; w.date = date
+
+        let a = CDActivity(context: context)
+        a.id = UUID(); a.name = activityName
+        a.category = ActivityCategory.strength.rawValue
+        a.primaryMetric = metric.rawValue
+
+        let e = CDWorkoutEntry(context: context)
+        e.id = UUID(); e.orderIndex = 0; e.activity = a; e.workout = w
+
+        for (i, s) in sets.enumerated() {
+            let set = CDEntrySet(context: context)
+            set.id = UUID(); set.setNumber = Int16(i + 1)
+            set.weightKg = s.weightKg; set.reps = s.reps
+            set.isPRAttempt = s.isPR; set.entry = e
+        }
+        return w
+    }
+
+    func test_buildCSV_headerRow() {
+        let csv = WorkoutExporter.buildCSV(for: [])
+        let header = csv.components(separatedBy: "\n").first ?? ""
+        XCTAssertTrue(header.hasPrefix("Date,Workout,Exercise"), "CSV must start with a header row")
+        XCTAssertTrue(header.contains("PR Attempt"), "Header must include PR Attempt column")
+    }
+
+    func test_buildCSV_emptyWorkouts_headerOnly() {
+        let csv = WorkoutExporter.buildCSV(for: [])
+        let lines = csv.components(separatedBy: "\n").filter { !$0.isEmpty }
+        XCTAssertEqual(lines.count, 1, "Empty workout list must produce only the header row")
+    }
+
+    func test_buildCSV_oneSetProducesOneDataRow() {
+        let w = makeFullWorkout(sets: [(100, 5, false)])
+        let csv = WorkoutExporter.buildCSV(for: [w])
+        let lines = csv.components(separatedBy: "\n").filter { !$0.isEmpty }
+        XCTAssertEqual(lines.count, 2, "One set must produce header + one data row")
+    }
+
+    func test_buildCSV_multipleSetsProduceMultipleRows() {
+        let w = makeFullWorkout(sets: [(100, 5, false), (110, 3, true), (90, 8, false)])
+        let csv = WorkoutExporter.buildCSV(for: [w])
+        let lines = csv.components(separatedBy: "\n").filter { !$0.isEmpty }
+        XCTAssertEqual(lines.count, 4, "Three sets must produce header + three data rows")
+    }
+
+    func test_buildCSV_workoutTitleInRow() {
+        let w = makeFullWorkout(title: "Heavy Leg Day")
+        let csv = WorkoutExporter.buildCSV(for: [w])
+        XCTAssertTrue(csv.contains("Heavy Leg Day"), "Workout title must appear in CSV")
+    }
+
+    func test_buildCSV_activityNameInRow() {
+        let w = makeFullWorkout(activityName: "Deadlift")
+        let csv = WorkoutExporter.buildCSV(for: [w])
+        XCTAssertTrue(csv.contains("Deadlift"), "Activity name must appear in CSV")
+    }
+
+    func test_buildCSV_prAttemptTrue_appearsInRow() {
+        let w = makeFullWorkout(sets: [(100, 5, true)])
+        let csv = WorkoutExporter.buildCSV(for: [w])
+        let dataRow = csv.components(separatedBy: "\n").dropFirst().first ?? ""
+        XCTAssertTrue(dataRow.hasSuffix("true"), "PR Attempt column must be 'true' when set")
+    }
+
+    func test_buildCSV_prAttemptFalse_emptyInRow() {
+        let w = makeFullWorkout(sets: [(100, 5, false)])
+        let csv = WorkoutExporter.buildCSV(for: [w])
+        let dataRow = csv.components(separatedBy: "\n").dropFirst().first ?? ""
+        XCTAssertFalse(dataRow.hasSuffix("true"), "PR Attempt column must be empty when not set")
+    }
+
+    func test_buildCSV_commaInTitle_escapedWithQuotes() {
+        let w = makeFullWorkout(title: "Push, Pull, Legs")
+        let csv = WorkoutExporter.buildCSV(for: [w])
+        XCTAssertTrue(csv.contains("\"Push, Pull, Legs\""), "Title with commas must be quoted")
+    }
+
+    func test_buildCSV_multipleWorkouts_sortedNewestFirst() {
+        let older = makeFullWorkout(title: "Old Workout", date: Date(timeIntervalSinceReferenceDate: 1000))
+        let newer = makeFullWorkout(title: "New Workout", date: Date(timeIntervalSinceReferenceDate: 9000))
+        let csv = WorkoutExporter.buildCSV(for: [older, newer])
+        let lines = csv.components(separatedBy: "\n").filter { !$0.isEmpty }
+        XCTAssertTrue(lines[1].contains("New Workout"), "Newest workout must appear first in CSV")
+        XCTAssertTrue(lines[2].contains("Old Workout"), "Older workout must appear second in CSV")
+    }
+
+    func test_exportCSV_createsFile() throws {
+        Units._testOverrideIsMetric = true
+        defer { Units._testOverrideIsMetric = nil }
+        let w = makeFullWorkout()
+        let url = try WorkoutExporter.exportCSV(for: [w], directory: tempDirectory)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+    }
+
+    func test_exportCSV_hasCSVExtension() throws {
+        Units._testOverrideIsMetric = true
+        defer { Units._testOverrideIsMetric = nil }
+        let w = makeFullWorkout()
+        let url = try WorkoutExporter.exportCSV(for: [w], directory: tempDirectory)
+        XCTAssertEqual(url.pathExtension, "csv")
+    }
+
+    func test_exportCSV_contentIsReadableString() throws {
+        Units._testOverrideIsMetric = true
+        defer { Units._testOverrideIsMetric = nil }
+        let w = makeFullWorkout()
+        let url = try WorkoutExporter.exportCSV(for: [w], directory: tempDirectory)
+        let content = try String(contentsOf: url, encoding: .utf8)
+        XCTAssertTrue(content.hasPrefix("Date,"), "CSV file content must begin with the header row")
+    }
 }

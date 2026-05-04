@@ -12,6 +12,10 @@ struct WorkoutListView: View {
     @State private var showingPrintSummary = false
     @State private var searchText = ""
     @State private var persistenceAlert: PersistenceAlertState? = nil
+    @State private var csvShareURL: URL? = nil
+    @State private var showingCSVShare = false
+    @State private var isExportingCSV = false
+    @State private var csvExportError: String? = nil
 
     private var filtered: [CDWorkout] {
         guard !searchText.isEmpty else { return Array(workouts) }
@@ -56,10 +60,20 @@ struct WorkoutListView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     if !workouts.isEmpty {
-                        Button {
-                            showingPrintSummary = true
+                        Menu {
+                            Button {
+                                showingPrintSummary = true
+                            } label: {
+                                Label("Print Summary", systemImage: "printer")
+                            }
+                            Button {
+                                exportCSV()
+                            } label: {
+                                Label("Export CSV", systemImage: "tablecells")
+                            }
+                            .disabled(isExportingCSV)
                         } label: {
-                            Image(systemName: "printer")
+                            Image(systemName: "ellipsis.circle")
                         }
                     }
                 }
@@ -73,6 +87,19 @@ struct WorkoutListView: View {
             }
             .sheet(isPresented: $showingPrintSummary) {
                 PrintSummaryView(allWorkouts: Array(workouts))
+            }
+            .sheet(isPresented: $showingCSVShare, onDismiss: { csvShareURL = nil }) {
+                if let url = csvShareURL {
+                    ShareSheet(items: [url])
+                }
+            }
+            .alert("Couldn't Export CSV", isPresented: Binding(
+                get: { csvExportError != nil },
+                set: { if !$0 { csvExportError = nil } }
+            )) {
+                Button("OK", role: .cancel) { csvExportError = nil }
+            } message: {
+                Text(csvExportError ?? "An unknown error occurred.")
             }
             .persistenceErrorAlert($persistenceAlert)
         }
@@ -88,6 +115,20 @@ struct WorkoutListView: View {
                 startDestination = WorkoutStartCoordinator.startDestination(from: Array(workouts))
             }
                 .buttonStyle(.borderedProminent)
+        }
+    }
+
+    private func exportCSV() {
+        guard !isExportingCSV else { return }
+        isExportingCSV = true
+        Task { @MainActor in
+            defer { isExportingCSV = false }
+            do {
+                csvShareURL = try WorkoutExporter.exportCSV(for: Array(workouts))
+                showingCSVShare = true
+            } catch {
+                csvExportError = error.localizedDescription
+            }
         }
     }
 
@@ -109,34 +150,16 @@ enum WorkoutSummaryRowStyle {
     case list
 }
 
-enum WorkoutNavigationMode: Equatable {
-    case detail
-    case editInProgress
-
-    static func initialMode(for workout: CDWorkout) -> WorkoutNavigationMode {
-        workout.isCompleted ? .detail : .editInProgress
-    }
-}
-
 struct WorkoutNavigationDestination: View {
     @ObservedObject var workout: CDWorkout
-    let mode: WorkoutNavigationMode
-
-    init(workout: CDWorkout) {
-        self.workout = workout
-        self.mode = WorkoutNavigationMode.initialMode(for: workout)
-    }
 
     var body: some View {
         if !workout.canRenderInUI {
             Color.clear
+        } else if workout.isCompleted {
+            WorkoutDetailView(workout: workout)
         } else {
-            switch mode {
-            case .detail:
-                WorkoutDetailView(workout: workout)
-            case .editInProgress:
-                LogWorkoutView(workout: workout)
-            }
+            LogWorkoutView(workout: workout)
         }
     }
 }

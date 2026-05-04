@@ -112,7 +112,7 @@ struct LogWorkoutView: View {
             }
             .sheet(isPresented: $showingPicker) {
                 ExercisePickerView { activity in
-                    entries.append(LiveEntry(activity: activity))
+                    entries.insert(LiveEntry(activity: activity), at: 0)
                 }
             }
             .fullScreenCover(isPresented: $showingCelebration) {

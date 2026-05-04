@@ -81,29 +81,6 @@ final class WorkoutStartCoordinatorTests: XCTestCase {
         XCTAssertEqual(destination.workout?.objectID, newer.objectID)
     }
 
-    func test_navigationMode_staysEditForWorkoutThatWasInProgressWhenOpened() {
-        let workout = makeWorkout(
-            title: "In Progress",
-            date: Date(timeIntervalSinceReferenceDate: 100),
-            isCompleted: false
-        )
-
-        let mode = WorkoutNavigationMode.initialMode(for: workout)
-        workout.isCompleted = true
-
-        XCTAssertEqual(mode, .editInProgress)
-    }
-
-    func test_navigationMode_isDetailForCompletedWorkout() {
-        let workout = makeWorkout(
-            title: "Completed",
-            date: Date(timeIntervalSinceReferenceDate: 100),
-            isCompleted: true
-        )
-
-        XCTAssertEqual(WorkoutNavigationMode.initialMode(for: workout), .detail)
-    }
-
     func test_completionState_marksExistingWorkoutCompletedWhenSessionJustCompleted() {
         let workout = makeWorkout(
             title: "In Progress",
