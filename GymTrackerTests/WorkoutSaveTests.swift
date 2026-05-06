@@ -232,6 +232,61 @@ final class WorkoutSaveTests: XCTestCase {
         XCTAssertTrue(result.savedWorkout.isCompleted)
     }
 
+    func test_multipleCompletedWorkoutsSameDay_canEachReturnExpectedPersonalRecordNames() throws {
+        let activity = makeActivity(name: "Bench Press")
+        let dayStart = Date(timeIntervalSinceReferenceDate: 20_000)
+
+        let firstResult = try WorkoutEditor.save(
+            data: WorkoutEditor.WorkoutData(
+                title: "Morning Bench",
+                date: dayStart,
+                energyLevel: 7,
+                notes: "",
+                entries: [
+                    LiveEntry(activity: activity, sets: {
+                        var set = liveSet(weightKg: "80", reps: "5")
+                        set.isPRAttempt = true
+                        return [set]
+                    }(), notes: "")
+                ]
+            ),
+            context: context,
+            existingWorkout: nil,
+            isDuplicate: false,
+            startTime: dayStart,
+            intent: .complete,
+            completedAt: dayStart.addingTimeInterval(30 * 60)
+        )
+
+        let secondStart = dayStart.addingTimeInterval(6 * 60 * 60)
+        let secondResult = try WorkoutEditor.save(
+            data: WorkoutEditor.WorkoutData(
+                title: "Evening Bench",
+                date: secondStart,
+                energyLevel: 8,
+                notes: "",
+                entries: [
+                    LiveEntry(activity: activity, sets: {
+                        var set = liveSet(weightKg: "90", reps: "3")
+                        set.isPRAttempt = true
+                        return [set]
+                    }(), notes: "")
+                ]
+            ),
+            context: context,
+            existingWorkout: nil,
+            isDuplicate: false,
+            startTime: secondStart,
+            intent: .complete,
+            completedAt: secondStart.addingTimeInterval(45 * 60)
+        )
+
+        XCTAssertEqual(firstResult.newPRNames, ["Bench Press"])
+        XCTAssertEqual(secondResult.newPRNames, ["Bench Press"])
+        XCTAssertTrue(firstResult.savedWorkout.isCompleted)
+        XCTAssertTrue(secondResult.savedWorkout.isCompleted)
+    }
+
     func test_save_workout_storesEnergyLevel() throws {
         let w = try saveNew(title: "Test", energyLevel: 9)
         XCTAssertEqual(w.energyLevel, 9)

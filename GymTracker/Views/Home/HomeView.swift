@@ -14,6 +14,7 @@ struct HomeView: View {
     ) private var profiles: FetchedResults<CDUserProfile>
 
     @State private var startDestination: WorkoutStartDestination? = nil
+    @State private var navigationPath: [WorkoutNavigationRoute] = []
 
     private var profile: CDUserProfile? { profiles.first }
     private var recentWorkouts: [CDWorkout] { Array(workouts.prefix(3)) }
@@ -34,7 +35,7 @@ struct HomeView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 GymTheme.appBackground.ignoresSafeArea()
 
@@ -60,6 +61,13 @@ struct HomeView: View {
                     LogWorkoutView(workout: workout)
                 } else {
                     LogWorkoutView()
+                }
+            }
+            .navigationDestination(for: WorkoutNavigationRoute.self) { route in
+                if let workout = workouts.first(where: { $0.objectID == route.workoutObjectID }) {
+                    WorkoutNavigationDestination(workout: workout, mode: route.mode)
+                } else {
+                    Color.clear
                 }
             }
         }
@@ -164,8 +172,8 @@ struct HomeView: View {
             }
 
             ForEach(recentWorkouts) { workout in
-                NavigationLink {
-                    WorkoutNavigationDestination(workout: workout)
+                Button {
+                    navigationPath.append(WorkoutNavigationRoute(workout: workout))
                 } label: {
                     WorkoutSummaryRow(workout: workout, style: .card)
                 }

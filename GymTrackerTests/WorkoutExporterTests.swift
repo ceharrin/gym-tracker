@@ -120,6 +120,15 @@ final class WorkoutExporterTests: XCTestCase {
         XCTAssertEqual(url.deletingLastPathComponent().lastPathComponent, WorkoutExporter.exportDirectoryName)
     }
 
+    func test_defaultExportDirectory_usesApplicationSupportFolder() throws {
+        let directory = try WorkoutExporter.defaultExportDirectory()
+
+        XCTAssertTrue(
+            directory.path.contains("/Application Support/"),
+            "Share exports should live in Application Support instead of Caches so the share sheet gets a stable file URL."
+        )
+    }
+
     // MARK: - Filename
 
     func test_exportHTML_filenameContainsWorkoutTitle() throws {

@@ -1,16 +1,23 @@
 import SwiftUI
 import CoreData
 
+private struct PRCelebrationPayload: Identifiable {
+    let id = UUID()
+    let activityNames: [String]
+}
+
 struct LogWorkoutView: View {
     @Environment(\.managedObjectContext) private var context
     @Environment(\.dismiss) private var dismiss
 
     let existingWorkout: CDWorkout?
     let isDuplicate: Bool
+    private let wrapsInNavigationStack: Bool
 
-    init(workout: CDWorkout? = nil, isDuplicate: Bool = false) {
+    init(workout: CDWorkout? = nil, isDuplicate: Bool = false, wrapsInNavigationStack: Bool = true) {
         self.existingWorkout = workout
         self.isDuplicate = isDuplicate
+        self.wrapsInNavigationStack = wrapsInNavigationStack
     }
 
     @State private var title: String = ""
@@ -20,136 +27,160 @@ struct LogWorkoutView: View {
     @State private var workoutDate: Date = Date()
     @State private var showingPicker = false
     @State private var startTime: Date = Date()
-    @State private var confirmedPRs: [String] = []
-    @State private var showingCelebration = false
+    @State private var celebrationPayload: PRCelebrationPayload?
     @State private var showingCompleteConfirmation = false
+    @State private var pendingConfirmedCompletion = false
     @State private var saveError: String? = nil
     @State private var completedDuringSession = false
     @State private var completedDurationMinutes: Int32? = nil
 
     var body: some View {
-        NavigationStack {
-            List {
-                Section {
-                    WorkoutMetaSection(
-                        title: $title,
-                        workoutDate: $workoutDate,
-                        durationText: durationText,
-                        statusText: workoutStatusText
-                    )
-                        .listRowInsets(EdgeInsets())
-                        .listRowSeparator(.hidden)
-                        .listRowBackground(Color.clear)
-                }
-                .listRowBackground(Color.clear)
+        if wrapsInNavigationStack {
+            NavigationStack {
+                content
+            }
+        } else {
+            content
+        }
+    }
 
-                ForEach($entries) { $entry in
-                    EntrySection(entry: $entry, onDeleteEntry: {
-                        entries.removeAll { $0.id == $entry.wrappedValue.id }
-                    })
-                }
-
-                if !entries.isEmpty {
-                    WorkoutFinishingSection(notes: $notes, energyLevel: $energyLevel)
-                }
-            }
-            .listStyle(.insetGrouped)
-            .navigationTitle(navigationTitle)
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-            }
-            .safeAreaInset(edge: .bottom) {
-                VStack(spacing: 8) {
-                    Button {
-                        showingPicker = true
-                    } label: {
-                        Label("Add Exercise / Activity", systemImage: "plus.circle.fill")
-                            .font(.subheadline)
-                            .fontWeight(.semibold)
-                            .foregroundStyle(.white)
-                            .frame(maxWidth: .infinity)
-                            .padding(14)
-                            .background(Color.accentColor)
-                            .clipShape(RoundedRectangle(cornerRadius: 14))
-                    }
-                    .buttonStyle(.plain)
-
-                    if !entries.isEmpty {
-                        HStack(spacing: 10) {
-                            if showsSaveProgressButton {
-                                Button {
-                                    save(intent: .saveProgress)
-                                } label: {
-                                    Text("Save Progress")
-                                        .font(.headline)
-                                        .frame(maxWidth: .infinity)
-                                        .padding(16)
-                                        .background(Color(.secondarySystemBackground))
-                                        .foregroundStyle(Color.accentColor)
-                                        .clipShape(RoundedRectangle(cornerRadius: 16))
-                                }
-                            }
-
-                            Button {
-                                if shouldConfirmCompletion {
-                                    showingCompleteConfirmation = true
-                                } else {
-                                    save(intent: .complete)
-                                }
-                            } label: {
-                                Text(primarySaveButtonTitle)
-                                    .font(.headline)
-                                    .frame(maxWidth: .infinity)
-                                    .padding(16)
-                                    .background(Color.accentColor)
-                                    .foregroundStyle(.white)
-                                    .clipShape(RoundedRectangle(cornerRadius: 16))
-                            }
-                        }
-                    }
-                }
-                .padding(.horizontal)
-                .padding(.vertical, 12)
-                .background(.regularMaterial)
-            }
-            .sheet(isPresented: $showingPicker) {
-                ExercisePickerView { activity in
-                    entries.insert(LiveEntry(activity: activity), at: 0)
-                }
-            }
-            .fullScreenCover(isPresented: $showingCelebration) {
-                PRCelebrationView(activityNames: confirmedPRs) {
-                    showingCelebration = false
-                    DispatchQueue.main.async {
-                        dismiss()
-                    }
-                }
-            }
-            .alert("Complete Workout?", isPresented: $showingCompleteConfirmation) {
-                Button("Cancel", role: .cancel) {
-                    showingCompleteConfirmation = false
-                }
-                Button("Complete", role: .destructive) {
-                    save(intent: .complete)
-                }
-            } message: {
-                Text("This will mark the workout as finished.")
-            }
-            .alert("Couldn't Save Workout", isPresented: Binding(
-                get: { saveError != nil },
-                set: { if !$0 { saveError = nil } }
-            )) {
-                Button("OK", role: .cancel) { saveError = nil }
-            } message: {
-                Text(saveError ?? "An unknown error occurred. Your workout was not saved.")
-            }
-            .onAppear {
-                configureInitialState(now: Date())
+    private var content: some View {
+        Group {
+            editorContent
+        }
+        .navigationTitle(navigationTitle)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Cancel") { dismiss() }
             }
         }
+        .safeAreaInset(edge: .bottom) {
+            bottomActions
+        }
+        .sheet(isPresented: $showingPicker) {
+            ExercisePickerView { activity in
+                entries.insert(LiveEntry(activity: activity), at: 0)
+            }
+        }
+        .fullScreenCover(item: $celebrationPayload) { payload in
+            PRCelebrationView(activityNames: payload.activityNames) {
+                celebrationPayload = nil
+                DispatchQueue.main.async {
+                    dismiss()
+                }
+            }
+        }
+        .alert("Complete Workout?", isPresented: $showingCompleteConfirmation) {
+            Button("Cancel", role: .cancel) {
+                pendingConfirmedCompletion = false
+                showingCompleteConfirmation = false
+            }
+            Button("Complete", role: .destructive) {
+                pendingConfirmedCompletion = true
+            }
+        } message: {
+            Text("This will mark the workout as finished.")
+        }
+        .alert("Couldn't Save Workout", isPresented: Binding(
+            get: { saveError != nil },
+            set: { if !$0 { saveError = nil } }
+        )) {
+            Button("OK", role: .cancel) { saveError = nil }
+        } message: {
+            Text(saveError ?? "An unknown error occurred. Your workout was not saved.")
+        }
+        .onAppear {
+            configureInitialState(now: Date())
+        }
+        .onChange(of: showingCompleteConfirmation) { _, isShowing in
+            guard !isShowing, pendingConfirmedCompletion else { return }
+            pendingConfirmedCompletion = false
+            save(intent: .complete)
+        }
+    }
+
+    private var editorContent: some View {
+        List {
+            Section {
+                WorkoutMetaSection(
+                    title: $title,
+                    workoutDate: $workoutDate,
+                    durationText: durationText,
+                    statusText: workoutStatusText
+                )
+                    .listRowInsets(EdgeInsets())
+                    .listRowSeparator(.hidden)
+                    .listRowBackground(Color.clear)
+            }
+            .listRowBackground(Color.clear)
+
+            ForEach($entries) { $entry in
+                EntrySection(entry: $entry, onDeleteEntry: {
+                    entries.removeAll { $0.id == $entry.wrappedValue.id }
+                })
+            }
+
+            if !entries.isEmpty {
+                WorkoutFinishingSection(notes: $notes, energyLevel: $energyLevel)
+            }
+        }
+        .listStyle(.insetGrouped)
+    }
+
+    private var bottomActions: some View {
+        VStack(spacing: 8) {
+            Button {
+                showingPicker = true
+            } label: {
+                Label("Add Exercise / Activity", systemImage: "plus.circle.fill")
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .padding(14)
+                    .background(Color.accentColor)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+            .buttonStyle(.plain)
+
+            if !entries.isEmpty {
+                HStack(spacing: 10) {
+                    if showsSaveProgressButton {
+                        Button {
+                            save(intent: .saveProgress)
+                        } label: {
+                            Text("Save Progress")
+                                .font(.headline)
+                                .frame(maxWidth: .infinity)
+                                .padding(16)
+                                .background(Color(.secondarySystemBackground))
+                                .foregroundStyle(Color.accentColor)
+                                .clipShape(RoundedRectangle(cornerRadius: 16))
+                        }
+                    }
+
+                    Button {
+                        if shouldConfirmCompletion {
+                            showingCompleteConfirmation = true
+                        } else {
+                            save(intent: .complete)
+                        }
+                    } label: {
+                        Text(primarySaveButtonTitle)
+                            .font(.headline)
+                            .frame(maxWidth: .infinity)
+                            .padding(16)
+                            .background(Color.accentColor)
+                            .foregroundStyle(.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 16))
+                    }
+                }
+            }
+        }
+        .padding(.horizontal)
+        .padding(.vertical, 12)
+        .background(.regularMaterial)
     }
 
     // MARK: Save
@@ -188,8 +219,7 @@ struct LogWorkoutView: View {
         if intent == .saveProgress || result.newPRNames.isEmpty {
             dismiss()
         } else {
-            confirmedPRs = result.newPRNames
-            showingCelebration = true
+            celebrationPayload = PRCelebrationPayload(activityNames: result.newPRNames)
         }
     }
 

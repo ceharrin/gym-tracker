@@ -12,7 +12,8 @@ A native iOS workout tracking app built with SwiftUI and Core Data. Supports str
 - **Body measurements** — Log weight and body fat over time with a historical chart in your profile
 - **Profile photo** — Pick a photo from your library for your profile
 - **Unit localisation** — Automatically uses kg/km/cm or lbs/miles/ft-in based on the device locale
-- **iCloud sync** — Workouts sync across devices via CloudKit when the user is signed into iCloud
+- **Local-first storage** — Workouts, profile data, and measurements are stored on the device
+- **Local backup export** — Export a local backup file before deleting the app or moving to a new device
 - **Print** — Print a single workout or a summary over a custom date range, formatted for paper
 
 ## Requirements
@@ -20,8 +21,6 @@ A native iOS workout tracking app built with SwiftUI and Core Data. Supports str
 - Xcode 16+
 - iOS 18.0+ deployment target
 - [xcodegen](https://github.com/yonaskolb/XcodeGen) (`brew install xcodegen`)
-- An Apple Developer account with iCloud/CloudKit capability enabled (for sync)
-
 ## Getting Started
 
 ```bash
@@ -33,14 +32,12 @@ open GymTracker.xcodeproj
 
 Build and run on an iOS 18 simulator or device.
 
-> **iCloud sync:** To enable sync, open the project in Xcode, go to **Signing & Capabilities**, add the **iCloud** capability, and select (or create) the `iCloud.com.chrisharrington.GymTracker` container. Without this step the app runs fully offline.
-
 ## Architecture
 
 | Layer | Details |
 |---|---|
 | UI | SwiftUI, iOS 18 |
-| Persistence | Core Data (`NSPersistentCloudKitContainer`) |
+| Persistence | Core Data (`NSPersistentContainer`) |
 | Charts | Swift Charts |
 | Project generation | xcodegen (`project.yml`) |
 | Testing | XCTest unit tests in `GymTrackerTests/` |
@@ -56,8 +53,7 @@ GymTracker/
 │   ├── PRDetector.swift           Pure personal-record detection logic
 │   ├── WorkoutHTMLFormatter.swift HTML generation for printing
 │   ├── PrintCoordinator.swift     UIKit bridge to UIPrintInteractionController
-│   ├── CloudSyncMonitor.swift     Observes CKAccountStatus for iCloud sync UI
-│   ├── Persistence.swift          Core Data + CloudKit stack
+│   ├── Persistence.swift          Core Data stack
 │   └── CDModels/                  One file per entity (CoreDataClass + Helpers)
 └── Views/
     ├── Workout/
@@ -66,7 +62,7 @@ GymTracker/
     │   ├── WorkoutListView.swift   History list + print summary
     │   └── PrintSummaryView.swift  Date-range picker for summary printing
     └── Profile/
-        └── ProfileView.swift       Stats, measurements, iCloud sync status
+        └── ProfileView.swift       Stats, measurements, and local backup export
 ```
 
 ## Running Tests

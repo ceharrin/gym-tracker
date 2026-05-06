@@ -1,5 +1,4 @@
 import CoreData
-import CloudKit
 import Foundation
 import SwiftUI
 
@@ -10,10 +9,6 @@ struct PersistenceController {
         let isTests = ProcessInfo.processInfo.environment["XCTestConfigurationFilePath"] != nil
         return PersistenceController(inMemory: isTests)
     }()
-
-    // Must match the iCloud container configured in the Apple Developer portal
-    // and the app's entitlements.
-    static let iCloudContainerIdentifier = "iCloud.com.ceharrin.GymTracker"
 
     /// Reuse one managed object model instance across containers so tests do not
     /// accumulate duplicate entity descriptions for the same NSManagedObject subclasses.
@@ -28,18 +23,15 @@ struct PersistenceController {
         return model
     }()
 
-    let container: NSPersistentCloudKitContainer
+    let container: NSPersistentContainer
 
     init(inMemory: Bool = false) {
-        container = NSPersistentCloudKitContainer(
+        container = NSPersistentContainer(
             name: "GymTracker",
             managedObjectModel: Self.managedObjectModel
         )
 
         if inMemory {
-            // Use a proper in-memory store description rather than /dev/null.
-            // NSPersistentCloudKitContainer requires this to avoid migration checks
-            // against any existing on-disk store.
             let description = NSPersistentStoreDescription()
             description.type = NSInMemoryStoreType
             container.persistentStoreDescriptions = [description]
@@ -60,38 +52,15 @@ struct PersistenceController {
             ensureProfileExists()
             ActivitySeeder.seedIfNeeded(context: container.viewContext)
             ActivitySeeder.deduplicatePresets(context: container.viewContext)
-            observeRemoteChanges()
         }
     }
 
-    private func observeRemoteChanges() {
-        NotificationCenter.default.addObserver(
-            forName: .NSPersistentStoreRemoteChange,
-            object: container.persistentStoreCoordinator,
-            queue: .main
-        ) { [weak container] _ in
-            guard let ctx = container?.viewContext else { return }
-            ctx.perform {
-                ActivitySeeder.deduplicatePresets(context: ctx)
-            }
-        }
-    }
-
-    /// Applies all options required for CloudKit sync to a persistent store description.
-    /// Extracted so the configuration can be tested independently of a loaded store.
     static func configureProductionStore(_ description: NSPersistentStoreDescription) {
-        // Allows Core Data to migrate existing stores automatically when the model
-        // changes (e.g. removing allowsExternalBinaryDataStorage from photoData).
         description.shouldMigrateStoreAutomatically = true
         description.shouldInferMappingModelAutomatically = true
-        // Required by CloudKit and by existing on-disk stores (removing this causes
-        // a "permission" save error on stores that were created with it enabled).
+        // Keep history tracking enabled so existing stores created under the
+        // prior CloudKit-backed configuration continue to open read-write.
         description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
-        // Tells the view context to merge remote changes as they arrive.
-        description.setOption(true as NSNumber, forKey: NSPersistentStoreRemoteChangeNotificationPostOptionKey)
-        description.cloudKitContainerOptions = NSPersistentCloudKitContainerOptions(
-            containerIdentifier: iCloudContainerIdentifier
-        )
     }
 
     var context: NSManagedObjectContext { container.viewContext }

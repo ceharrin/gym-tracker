@@ -204,7 +204,7 @@ enum WorkoutExporter {
     static func defaultExportDirectory(fileManager: FileManager = .default) throws -> URL {
         do {
             let base = try fileManager.url(
-                for: .cachesDirectory,
+                for: .applicationSupportDirectory,
                 in: .userDomainMask,
                 appropriateFor: nil,
                 create: true

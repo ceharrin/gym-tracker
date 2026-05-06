@@ -20,6 +20,7 @@ struct WorkoutListView: View {
     @State private var csvExportStartDate = Date()
     @State private var csvExportEndDate = Date()
     @State private var visibleWorkoutCount = WorkoutHistoryDisplayPolicy.initialVisibleCount
+    @State private var navigationPath: [WorkoutNavigationRoute] = []
 
     private var visibleWorkouts: [CDWorkout] {
         WorkoutHistoryDisplayPolicy.visibleWorkouts(
@@ -53,7 +54,7 @@ struct WorkoutListView: View {
     }
 
     var body: some View {
-        NavigationStack {
+        NavigationStack(path: $navigationPath) {
             ZStack {
                 GymTheme.appBackground.ignoresSafeArea()
 
@@ -65,11 +66,12 @@ struct WorkoutListView: View {
                             ForEach(grouped, id: \.0) { month, items in
                                 Section {
                                     ForEach(items) { workout in
-                                        NavigationLink {
-                                            WorkoutNavigationDestination(workout: workout)
+                                        Button {
+                                            navigationPath.append(WorkoutNavigationRoute(workout: workout))
                                         } label: {
                                             WorkoutSummaryRow(workout: workout, style: .list)
                                         }
+                                        .buttonStyle(.plain)
                                     }
                                     .onDelete { delete(items: items, offsets: $0) }
                                 } header: {
@@ -164,6 +166,13 @@ struct WorkoutListView: View {
             .sheet(isPresented: $showingCSVShare, onDismiss: { csvShareURL = nil }) {
                 if let url = csvShareURL {
                     ShareSheet(items: [url])
+                }
+            }
+            .navigationDestination(for: WorkoutNavigationRoute.self) { route in
+                if let workout = workouts.first(where: { $0.objectID == route.workoutObjectID }) {
+                    WorkoutNavigationDestination(workout: workout, mode: route.mode)
+                } else {
+                    Color.clear
                 }
             }
             .alert("Couldn't Export CSV", isPresented: Binding(
@@ -333,17 +342,42 @@ enum WorkoutSummaryRowStyle {
     case list
 }
 
+enum WorkoutNavigationMode {
+    case detail
+    case edit
+}
+
+struct WorkoutNavigationRoute: Hashable {
+    let workoutObjectID: NSManagedObjectID
+    let mode: WorkoutNavigationMode
+
+    init(workout: CDWorkout) {
+        self.workoutObjectID = workout.objectID
+        self.mode = WorkoutNavigationDestination.initialMode(for: workout)
+    }
+}
+
 struct WorkoutNavigationDestination: View {
     @ObservedObject var workout: CDWorkout
+    private let mode: WorkoutNavigationMode
+
+    init(workout: CDWorkout, mode: WorkoutNavigationMode? = nil) {
+        self.workout = workout
+        self.mode = mode ?? Self.initialMode(for: workout)
+    }
 
     var body: some View {
         if !workout.canRenderInUI {
             Color.clear
-        } else if workout.isCompleted {
+        } else if mode == .detail {
             WorkoutDetailView(workout: workout)
         } else {
-            LogWorkoutView(workout: workout)
+            LogWorkoutView(workout: workout, wrapsInNavigationStack: false)
         }
+    }
+
+    static func initialMode(for workout: CDWorkout) -> WorkoutNavigationMode {
+        workout.isCompleted ? .detail : .edit
     }
 }
 

@@ -144,4 +144,53 @@ final class WorkoutStartCoordinatorTests: XCTestCase {
             )
         )
     }
+
+    func test_navigationDestination_initialMode_usesEditForInProgressWorkout() {
+        let workout = makeWorkout(
+            title: "In Progress",
+            date: Date(timeIntervalSinceReferenceDate: 100),
+            isCompleted: false
+        )
+
+        XCTAssertEqual(WorkoutNavigationDestination.initialMode(for: workout), .edit)
+    }
+
+    func test_navigationDestination_initialMode_usesDetailForCompletedWorkout() {
+        let workout = makeWorkout(
+            title: "Completed",
+            date: Date(timeIntervalSinceReferenceDate: 100),
+            isCompleted: true
+        )
+
+        XCTAssertEqual(WorkoutNavigationDestination.initialMode(for: workout), .detail)
+    }
+
+    func test_navigationRoute_createdForCompletedWorkout_usesDetailMode() {
+        let workout = makeWorkout(
+            title: "Completed",
+            date: Date(timeIntervalSinceReferenceDate: 100),
+            isCompleted: true
+        )
+
+        let route = WorkoutNavigationRoute(workout: workout)
+
+        XCTAssertEqual(route.mode, .detail)
+        XCTAssertEqual(route.workoutObjectID, workout.objectID)
+    }
+
+    func test_navigationRoute_createdAfterInProgressWorkoutCompletes_usesDetailMode() {
+        let workout = makeWorkout(
+            title: "Completed Later",
+            date: Date(timeIntervalSinceReferenceDate: 100),
+            isCompleted: false
+        )
+        let staleRoute = WorkoutNavigationRoute(workout: workout)
+
+        workout.isCompleted = true
+        let routeAfterCompletion = WorkoutNavigationRoute(workout: workout)
+
+        XCTAssertEqual(staleRoute.mode, .edit)
+        XCTAssertEqual(routeAfterCompletion.mode, .detail)
+        XCTAssertEqual(routeAfterCompletion.workoutObjectID, workout.objectID)
+    }
 }
