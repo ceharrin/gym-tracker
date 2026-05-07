@@ -15,7 +15,13 @@ struct ProgressView: View {
         animation: .default
     ) private var profiles: FetchedResults<CDUserProfile>
 
+    @FetchRequest(
+        sortDescriptors: [NSSortDescriptor(keyPath: \CDWorkout.date, ascending: true)],
+        animation: .default
+    ) private var workouts: FetchedResults<CDWorkout>
+
     @State private var selectedActivities: Set<CDActivity> = []
+    @State private var selectedWorkoutMetrics: Set<WorkoutTotalMetric> = []
     @State private var selectedRange: ProgressDateRange = .threeMonths
     @State private var exportURL: URL? = nil
     @State private var showingShareSheet = false
@@ -33,6 +39,10 @@ struct ProgressView: View {
                     VStack(spacing: 20) {
                         rangeSelector
                         bodyWeightChart
+                        workoutTotalsPicker
+                        ForEach(selectedWorkoutMetrics.sorted { $0.rawValue < $1.rawValue }) { metric in
+                            workoutTotalChart(for: metric)
+                        }
                         activityPicker
                         if selectedActivities.isEmpty {
                             activityPlaceholder
@@ -213,6 +223,114 @@ struct ProgressView: View {
 
     private var activitiesWithData: [CDActivity] {
         activities.filter { ($0.entries?.count ?? 0) > 0 }
+    }
+
+    // MARK: Workout Totals
+
+    private var workoutTotalsPicker: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("Workout Totals")
+                .font(.headline)
+
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 8) {
+                    ForEach(workoutMetricsWithData) { metric in
+                        Button {
+                            if selectedWorkoutMetrics.contains(metric) {
+                                selectedWorkoutMetrics.remove(metric)
+                            } else {
+                                selectedWorkoutMetrics.insert(metric)
+                            }
+                        } label: {
+                            HStack(spacing: 6) {
+                                Image(systemName: metric.icon)
+                                    .font(.caption)
+                                Text(metric.title)
+                                    .font(.caption)
+                                    .fontWeight(.medium)
+                            }
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 7)
+                            .background(selectedWorkoutMetrics.contains(metric)
+                                ? AnyShapeStyle(
+                                    LinearGradient(
+                                        colors: [GymTheme.electricBlue, GymTheme.brightBlue],
+                                        startPoint: .leading,
+                                        endPoint: .trailing
+                                    )
+                                )
+                                : AnyShapeStyle(Color.white.opacity(0.78)))
+                            .foregroundStyle(selectedWorkoutMetrics.contains(metric) ? .white : GymTheme.ink)
+                            .clipShape(Capsule())
+                            .overlay {
+                                Capsule()
+                                    .stroke(Color.white.opacity(selectedWorkoutMetrics.contains(metric) ? 0.0 : 0.65), lineWidth: 1)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 1)
+            }
+        }
+    }
+
+    private var workoutMetricsWithData: [WorkoutTotalMetric] {
+        WorkoutTotalMetric.allCases.filter { metric in
+            Array(workouts).contains { workout in
+                if let cutoffDate, workout.date < cutoffDate { return false }
+                return metric.value(from: workout) > 0
+            }
+        }
+    }
+
+    private func workoutTotalChart(for metric: WorkoutTotalMetric) -> some View {
+        let dataPoints = Array(workouts).workoutTotalChartPoints(for: metric, cutoffDate: cutoffDate)
+
+        return VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                Image(systemName: metric.icon)
+                    .foregroundStyle(GymTheme.electricBlue)
+                Text(metric.title)
+                    .font(.headline)
+                Spacer()
+                Text(metric.chartLabel)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if dataPoints.isEmpty {
+                emptyChartPlaceholder(message: "No workout totals in selected range.")
+            } else {
+                Chart {
+                    ForEach(dataPoints) { point in
+                        LineMark(
+                            x: .value("Date", point.date),
+                            y: .value(metric.chartLabel, point.value)
+                        )
+                        .foregroundStyle(GymTheme.electricBlue)
+                        .interpolationMethod(.catmullRom)
+
+                        PointMark(
+                            x: .value("Date", point.date),
+                            y: .value(metric.chartLabel, point.value)
+                        )
+                        .foregroundStyle(GymTheme.electricBlue)
+                        .annotation(position: .top) {
+                            Text(metric.formattedValue(point.value))
+                                .font(.system(size: 9))
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(position: .leading)
+                }
+                .frame(height: 200)
+            }
+        }
+        .padding(16)
+        .gymCard()
     }
 
     private var activityPlaceholder: some View {

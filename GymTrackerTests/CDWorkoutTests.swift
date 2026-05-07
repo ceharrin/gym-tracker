@@ -45,6 +45,30 @@ final class CDWorkoutTests: XCTestCase {
         return e
     }
 
+    @discardableResult
+    private func makeSet(
+        entry: CDWorkoutEntry,
+        setNumber: Int16 = 1,
+        weightKg: Double = 0,
+        reps: Int32 = 0,
+        distanceMeters: Double = 0,
+        durationSeconds: Int32 = 0,
+        laps: Int32 = 0,
+        customValue: Double = 0
+    ) -> CDEntrySet {
+        let s = CDEntrySet(context: context)
+        s.id = UUID()
+        s.setNumber = setNumber
+        s.weightKg = weightKg
+        s.reps = reps
+        s.distanceMeters = distanceMeters
+        s.durationSeconds = durationSeconds
+        s.laps = laps
+        s.customValue = customValue
+        s.entry = entry
+        return s
+    }
+
     // MARK: - activitySummary
 
     func test_activitySummary_noEntries() {
@@ -127,6 +151,65 @@ final class CDWorkoutTests: XCTestCase {
     func test_totalSets_zeroWhenNoEntries() {
         let w = makeWorkout()
         XCTAssertEqual(w.totalSets, 0)
+    }
+
+    // MARK: - totals
+
+    func test_totals_sumWorkoutVolumeAndCountsAcrossSets() {
+        let workout = makeWorkout()
+        let strength = makeEntry(workout: workout, activity: makeActivity(name: "Bench"), orderIndex: 0)
+        makeSet(entry: strength, setNumber: 1, weightKg: 100, reps: 5)
+        makeSet(entry: strength, setNumber: 2, weightKg: 80, reps: 10)
+
+        let cardio = makeEntry(workout: workout, activity: makeActivity(name: "Run", category: .cardio), orderIndex: 1)
+        makeSet(entry: cardio, distanceMeters: 1609.344, durationSeconds: 600)
+
+        let swim = makeEntry(workout: workout, activity: makeActivity(name: "Swim", category: .swimming), orderIndex: 2)
+        makeSet(entry: swim, durationSeconds: 900, laps: 20)
+
+        let custom = makeEntry(workout: workout, activity: makeActivity(name: "Mobility", category: .custom), orderIndex: 3)
+        makeSet(entry: custom, customValue: 12.5)
+
+        let totals = workout.totals
+
+        XCTAssertEqual(totals.totalWeightVolumeKg, 1300, accuracy: 0.001)
+        XCTAssertEqual(totals.totalReps, 15)
+        XCTAssertEqual(totals.totalDistanceMeters, 1609.344, accuracy: 0.001)
+        XCTAssertEqual(totals.totalDurationSeconds, 1500)
+        XCTAssertEqual(totals.totalLaps, 20)
+        XCTAssertEqual(totals.totalCustomValue, 12.5, accuracy: 0.001)
+    }
+
+    func test_displayableTotalMetrics_onlyIncludesNonZeroTotals() {
+        let workout = makeWorkout()
+        let entry = makeEntry(workout: workout, activity: makeActivity(name: "Bench"))
+        makeSet(entry: entry, weightKg: 50, reps: 4)
+
+        XCTAssertEqual(workout.displayableTotalMetrics, [.weightVolume, .reps])
+    }
+
+    func test_workoutTotalChartPoints_filtersEmptyAndOutOfRangeWorkouts() {
+        let oldWorkout = makeWorkout()
+        oldWorkout.date = Date(timeIntervalSinceReferenceDate: 100)
+        let oldEntry = makeEntry(workout: oldWorkout, activity: makeActivity(name: "Old Bench"))
+        makeSet(entry: oldEntry, weightKg: 100, reps: 5)
+
+        let inRangeWorkout = makeWorkout()
+        inRangeWorkout.date = Date(timeIntervalSinceReferenceDate: 300)
+        let inRangeEntry = makeEntry(workout: inRangeWorkout, activity: makeActivity(name: "New Bench"))
+        makeSet(entry: inRangeEntry, weightKg: 80, reps: 10)
+
+        let emptyWorkout = makeWorkout()
+        emptyWorkout.date = Date(timeIntervalSinceReferenceDate: 400)
+
+        let points = [oldWorkout, inRangeWorkout, emptyWorkout].workoutTotalChartPoints(
+            for: .reps,
+            cutoffDate: Date(timeIntervalSinceReferenceDate: 200)
+        )
+
+        XCTAssertEqual(points.count, 1)
+        XCTAssertEqual(points.first?.id, inRangeWorkout.objectID)
+        XCTAssertEqual(points.first?.value ?? 0, 10, accuracy: 0.001)
     }
 
     // MARK: - statusLabel

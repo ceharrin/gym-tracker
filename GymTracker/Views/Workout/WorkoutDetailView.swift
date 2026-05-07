@@ -23,6 +23,7 @@ struct WorkoutDetailView: View {
                 ScrollView {
                     VStack(spacing: 20) {
                         metaCard
+                        workoutTotalsCard
                         ForEach(workout.sortedEntries) { entry in
                             EntryDetailCard(entry: entry)
                         }
@@ -135,6 +136,56 @@ struct WorkoutDetailView: View {
         .padding(16)
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    @ViewBuilder
+    private var workoutTotalsCard: some View {
+        let metrics = workout.displayableTotalMetrics
+        if !metrics.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                Label("Workout Totals", systemImage: "sum")
+                    .font(.headline)
+                    .fontWeight(.semibold)
+
+                LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 10)], spacing: 10) {
+                    ForEach(metrics) { metric in
+                        workoutTotalTile(metric)
+                    }
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(16)
+            .background(Color(.secondarySystemBackground))
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+        }
+    }
+
+    private func workoutTotalTile(_ metric: WorkoutTotalMetric) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: metric.icon)
+                .font(.subheadline)
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 28, height: 28)
+                .background(Color.accentColor.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(metric.title)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                Text(metric.formattedValue(from: workout))
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+
+            Spacer(minLength: 0)
+        }
+        .padding(10)
+        .background(Color(uiColor: .tertiarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     private func metaStat(label: String, value: Date, style: Text.DateStyle) -> some View {
