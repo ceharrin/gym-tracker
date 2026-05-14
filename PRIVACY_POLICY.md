@@ -1,6 +1,6 @@
 # GymTracker Privacy Policy
 
-Last updated: May 5, 2026
+Last updated: May 7, 2026
 
 ## Overview
 
@@ -8,9 +8,9 @@ GymTracker is a workout tracking app that helps you log workouts, body measureme
 
 This Privacy Policy explains what information GymTracker stores and how it is used.
 
-## Information We Collect
+## Information Stored in the App
 
-GymTracker may collect and store the following information that you choose to add in the app:
+GymTracker stores the following information that you choose to add in the app:
 
 - Profile information, such as your name
 - Profile photo
@@ -30,6 +30,8 @@ GymTracker uses this information only to provide the core functionality of the a
 
 GymTracker does not use your information for advertising or marketing.
 
+GymTracker does not transmit your workout, profile, photo, body measurement, or custom activity data to the developer or to third-party services.
+
 ## Local Storage and Backups
 
 GymTracker stores your app data locally on your device.
@@ -44,7 +46,7 @@ GymTracker does not use third-party advertising SDKs.
 
 ## Photos
 
-If you choose a profile photo, the selected image is stored for your use in the app and may sync through iCloud when sync is enabled.
+If you choose a profile photo, the selected image is stored locally for your use in the app.
 
 GymTracker only accesses photos that you explicitly choose through the system photo picker.
 
@@ -86,8 +88,8 @@ We may update this Privacy Policy from time to time. If we make material changes
 
 ## Contact
 
-If you have questions about this Privacy Policy, please contact:
+If you have questions about this Privacy Policy, please contact the developer through the support channel listed on GymTracker's App Store page.
 
 - Developer: Chris Harrington
-- Email: [add your support email here]
-- Support URL: [add your support website here]
+- Support email: To be added before App Store submission
+- Support URL: To be added before App Store submission
