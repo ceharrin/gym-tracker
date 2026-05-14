@@ -116,6 +116,39 @@ final class LocalBackupExporterTests: XCTestCase {
         XCTAssertFalse(try LocalBackupExporter.hasMeaningfulData(in: context))
     }
 
+    func test_hasMeaningfulData_trueWhenAnyLocalDataCategoryHasContent() {
+        XCTAssertTrue(LocalBackupExporter.hasMeaningfulData(
+            workoutCount: 1,
+            measurementCount: 0,
+            customActivityCount: 0,
+            hasProfileDetails: false
+        ))
+        XCTAssertTrue(LocalBackupExporter.hasMeaningfulData(
+            workoutCount: 0,
+            measurementCount: 1,
+            customActivityCount: 0,
+            hasProfileDetails: false
+        ))
+        XCTAssertTrue(LocalBackupExporter.hasMeaningfulData(
+            workoutCount: 0,
+            measurementCount: 0,
+            customActivityCount: 1,
+            hasProfileDetails: false
+        ))
+        XCTAssertTrue(LocalBackupExporter.hasMeaningfulData(
+            workoutCount: 0,
+            measurementCount: 0,
+            customActivityCount: 0,
+            hasProfileDetails: true
+        ))
+        XCTAssertFalse(LocalBackupExporter.hasMeaningfulData(
+            workoutCount: 0,
+            measurementCount: 0,
+            customActivityCount: 0,
+            hasProfileDetails: false
+        ))
+    }
+
     @MainActor
     func test_exportBackup_throwsWhenNoMeaningfulDataExists() throws {
         let profile = CDUserProfile(context: context)

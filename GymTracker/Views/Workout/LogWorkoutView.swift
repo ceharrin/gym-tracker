@@ -229,7 +229,6 @@ struct LogWorkoutView: View {
     }
 
     private func configureInitialState(now: Date) {
-        startTime = now
         let initialData = WorkoutEditor.initialData(
             existingWorkout: existingWorkout,
             isDuplicate: isDuplicate,

@@ -2,7 +2,7 @@ import SwiftUI
 import Charts
 import CoreData
 
-struct ProgressView: View {
+struct ProgressTabView: View {
     @Environment(\.managedObjectContext) private var context
 
     @FetchRequest(
@@ -74,7 +74,7 @@ struct ProgressView: View {
                         }
                     } label: {
                         if isExporting {
-                            ProgressView().scaleEffect(0.8)
+                            SwiftUI.ProgressView().scaleEffect(0.8)
                         } else {
                             Image(systemName: "square.and.arrow.up")
                         }
@@ -370,7 +370,7 @@ struct ProgressView: View {
                 emptyChartPlaceholder(message: "No data in selected range.")
             } else {
                 Chart {
-                    ForEach(dataPoints, id: \.date) { point in
+                    ForEach(dataPoints) { point in
                         LineMark(
                             x: .value("Date", point.date),
                             y: .value(activity.metric.chartYLabel, point.value)

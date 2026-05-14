@@ -35,6 +35,15 @@ final class CDActivityHelpersTests: XCTestCase {
         return w
     }
 
+    private func makeWorkout(date: Date) -> CDWorkout {
+        let w = CDWorkout(context: context)
+        w.id = UUID()
+        w.title = "Workout"
+        w.date = date
+        w.durationMinutes = 60
+        return w
+    }
+
     private func makeEntry(activity: CDActivity, workout: CDWorkout, orderIndex: Int16 = 0) -> CDWorkoutEntry {
         let e = CDWorkoutEntry(context: context)
         e.id = UUID()
@@ -42,6 +51,17 @@ final class CDActivityHelpersTests: XCTestCase {
         e.activity = activity
         e.workout = workout
         return e
+    }
+
+    @discardableResult
+    private func makeSet(entry: CDWorkoutEntry, reps: Int32 = 1, weightKg: Double = 0) -> CDEntrySet {
+        let set = CDEntrySet(context: context)
+        set.id = UUID()
+        set.setNumber = 1
+        set.reps = reps
+        set.weightKg = weightKg
+        set.entry = entry
+        return set
     }
 
     // MARK: - activityCategory
@@ -210,5 +230,20 @@ final class CDActivityHelpersTests: XCTestCase {
 
         XCTAssertEqual(a1.sortedEntries.count, 1)
         XCTAssertEqual(a2.sortedEntries.count, 1)
+    }
+
+    func test_progressChartPoints_usesUniqueIDsForSameDayEntries() {
+        let activity = makeActivity(metric: .reps)
+        let date = Date(timeIntervalSinceReferenceDate: 1_000)
+        let firstEntry = makeEntry(activity: activity, workout: makeWorkout(date: date), orderIndex: 0)
+        let secondEntry = makeEntry(activity: activity, workout: makeWorkout(date: date), orderIndex: 0)
+        makeSet(entry: firstEntry, reps: 10)
+        makeSet(entry: secondEntry, reps: 12)
+
+        let points = activity.progressChartPoints(cutoffDate: nil)
+
+        XCTAssertEqual(points.count, 2)
+        XCTAssertEqual(Set(points.map(\.id)).count, 2)
+        XCTAssertEqual(points.map(\.date), [date, date])
     }
 }

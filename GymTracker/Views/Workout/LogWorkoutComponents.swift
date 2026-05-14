@@ -189,11 +189,42 @@ enum RestTimerFormatter {
     }
 }
 
+struct RestTimerState {
+    private(set) var startedAt: Date?
+    private(set) var accumulatedSeconds: TimeInterval = 0
+
+    var isRunning: Bool {
+        startedAt != nil
+    }
+
+    func elapsedSeconds(now: Date) -> TimeInterval {
+        accumulatedSeconds + (startedAt.map { now.timeIntervalSince($0) } ?? 0)
+    }
+
+    mutating func toggle(now: Date) {
+        if let startedAt {
+            accumulatedSeconds += now.timeIntervalSince(startedAt)
+            self.startedAt = nil
+        } else {
+            startedAt = now
+        }
+    }
+
+    mutating func reset() {
+        accumulatedSeconds = 0
+        startedAt = nil
+    }
+
+    mutating func startFresh(now: Date = Date()) {
+        accumulatedSeconds = 0
+        startedAt = now
+    }
+}
+
 private struct RestTimerView: View {
     let restartToken: UUID
 
-    @State private var startedAt: Date?
-    @State private var accumulatedSeconds: TimeInterval = 0
+    @State private var timerState = RestTimerState()
 
     var body: some View {
         TimelineView(.periodic(from: Date(), by: 1)) { context in
@@ -207,9 +238,9 @@ private struct RestTimerView: View {
                 Spacer()
 
                 Button {
-                    toggle(now: context.date)
+                    timerState.toggle(now: context.date)
                 } label: {
-                    Label(isRunning ? "Pause" : "Start Rest", systemImage: isRunning ? "pause.fill" : "play.fill")
+                    Label(timerState.isRunning ? "Pause" : "Start Rest", systemImage: timerState.isRunning ? "pause.fill" : "play.fill")
                         .labelStyle(.titleAndIcon)
                         .font(.caption)
                         .fontWeight(.semibold)
@@ -217,7 +248,7 @@ private struct RestTimerView: View {
                 .buttonStyle(.bordered)
 
                 Button {
-                    reset()
+                    timerState.reset()
                 } label: {
                     Image(systemName: "arrow.counterclockwise")
                         .font(.caption)
@@ -229,39 +260,12 @@ private struct RestTimerView: View {
             .padding(.vertical, 6)
         }
         .onChange(of: restartToken) { _, _ in
-            startFresh()
+            timerState.startFresh()
         }
-    }
-
-    private var isRunning: Bool {
-        startedAt != nil
     }
 
     private func displayText(now: Date) -> String {
-        RestTimerFormatter.string(for: Int(elapsedSeconds(now: now).rounded(.down)))
-    }
-
-    private func elapsedSeconds(now: Date) -> TimeInterval {
-        accumulatedSeconds + (startedAt.map { now.timeIntervalSince($0) } ?? 0)
-    }
-
-    private func toggle(now: Date) {
-        if let startedAt {
-            accumulatedSeconds += now.timeIntervalSince(startedAt)
-            self.startedAt = nil
-        } else {
-            startedAt = now
-        }
-    }
-
-    private func reset() {
-        accumulatedSeconds = 0
-        startedAt = nil
-    }
-
-    private func startFresh() {
-        accumulatedSeconds = 0
-        startedAt = Date()
+        RestTimerFormatter.string(for: Int(timerState.elapsedSeconds(now: now).rounded(.down)))
     }
 }
 

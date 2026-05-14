@@ -206,7 +206,8 @@ enum PrimaryMetric: String, CaseIterable, Identifiable {
     }
 }
 
-struct ProgressChartPoint {
+struct ProgressChartPoint: Identifiable {
+    let id: NSManagedObjectID
     let date: Date
     let value: Double
 }
@@ -231,7 +232,11 @@ extension CDActivity {
         progressEntries(cutoffDate: cutoffDate)
             .compactMap { entry -> ProgressChartPoint? in
                 guard let date = entry.workout?.date, let set = entry.bestSet else { return nil }
-                return ProgressChartPoint(date: date, value: metric.chartValue(from: set))
+                return ProgressChartPoint(
+                    id: entry.objectID,
+                    date: date,
+                    value: metric.chartValue(from: set)
+                )
             }
             .sorted { $0.date < $1.date }
     }

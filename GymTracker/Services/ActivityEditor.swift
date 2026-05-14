@@ -29,10 +29,7 @@ enum ActivityEditor {
     }
 
     static func availableMetrics(for category: ActivityCategory, allowsRepsOnly: Bool) -> [PrimaryMetric] {
-        if allowsRepsOnly {
-            return PrimaryMetric.allCases
-        }
-        if category == .custom {
+        if allowsRepsOnly || category == .custom {
             return PrimaryMetric.allCases
         }
         return PrimaryMetric.allCases.filter { $0 != .reps }

@@ -11,11 +11,11 @@ final class WorkoutHistoryDisplayPolicyTests: XCTestCase {
         context = CoreDataTestHelper.makeContext()
     }
 
-    private func makeWorkout(title: String, summary: String = "", index: Int) -> CDWorkout {
+    private func makeWorkout(title: String, summary: String = "", index: Int, date: Date? = nil) -> CDWorkout {
         let workout = CDWorkout(context: context)
         workout.id = UUID()
         workout.title = title
-        workout.date = Date(timeIntervalSinceReferenceDate: TimeInterval(index))
+        workout.date = date ?? Date(timeIntervalSinceReferenceDate: TimeInterval(index))
         workout.startedAt = workout.date
         workout.isCompleted = true
         workout.durationMinutes = 30
@@ -106,5 +106,36 @@ final class WorkoutHistoryDisplayPolicyTests: XCTestCase {
             WorkoutHistoryDisplayPolicy.nextVisibleCount(currentVisibleCount: 200, totalCount: 250),
             250
         )
+    }
+
+    func test_groupedByMonth_sortsByMonthDateNotDisplayString() {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = TimeZone(secondsFromGMT: 0)!
+        let locale = Locale(identifier: "en_US_POSIX")
+
+        let september = makeWorkout(
+            title: "September",
+            index: 0,
+            date: calendar.date(from: DateComponents(year: 2026, month: 9, day: 10))!
+        )
+        let octoberLate = makeWorkout(
+            title: "October Late",
+            index: 1,
+            date: calendar.date(from: DateComponents(year: 2026, month: 10, day: 20))!
+        )
+        let octoberEarly = makeWorkout(
+            title: "October Early",
+            index: 2,
+            date: calendar.date(from: DateComponents(year: 2026, month: 10, day: 1))!
+        )
+
+        let groups = WorkoutHistoryDisplayPolicy.groupedByMonth(
+            workouts: [september, octoberEarly, octoberLate],
+            calendar: calendar,
+            locale: locale
+        )
+
+        XCTAssertEqual(groups.map(\.title), ["October 2026", "September 2026"])
+        XCTAssertEqual(groups.first?.workouts.map(\.title), ["October Late", "October Early"])
     }
 }

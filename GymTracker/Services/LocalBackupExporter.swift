@@ -28,7 +28,7 @@ struct LocalBackupImportWarning: Equatable {
             parts.append("profile details")
         }
 
-        let joined = ListFormatter.localizedString(byJoining: parts) ?? parts.joined(separator: ", ")
+        let joined = ListFormatter.localizedString(byJoining: parts)
         return "Importing a backup will replace the current local \(joined) on this device."
     }
 }
@@ -294,24 +294,36 @@ enum LocalBackupExporter {
 
     static func hasMeaningfulData(in context: NSManagedObjectContext) throws -> Bool {
         let workouts = try context.count(for: CDWorkout.fetchRequest())
-        if workouts > 0 { return true }
-
         let measurements = try context.count(for: CDBodyMeasurement.fetchRequest())
-        if measurements > 0 { return true }
 
         let customActivitiesRequest = CDActivity.fetchRequest()
         customActivitiesRequest.predicate = NSPredicate(format: "isPreset == NO")
         let customActivities = try context.count(for: customActivitiesRequest)
-        if customActivities > 0 { return true }
 
         let profiles = try context.fetch(CDUserProfile.fetchRequest())
-        return profiles.contains { profile in
-            !profile.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-            profile.heightCm > 0 ||
-            profile.birthDate != nil ||
-            !(profile.goals?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true) ||
-            profile.photoData != nil
-        }
+        return hasMeaningfulData(
+            workoutCount: workouts,
+            measurementCount: measurements,
+            customActivityCount: customActivities,
+            hasProfileDetails: profiles.contains(where: hasMeaningfulProfileDetails)
+        )
+    }
+
+    static func hasMeaningfulData(
+        workoutCount: Int,
+        measurementCount: Int,
+        customActivityCount: Int,
+        hasProfileDetails: Bool
+    ) -> Bool {
+        workoutCount > 0 || measurementCount > 0 || customActivityCount > 0 || hasProfileDetails
+    }
+
+    static func hasMeaningfulProfileDetails(_ profile: CDUserProfile) -> Bool {
+        !profile.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
+        profile.heightCm > 0 ||
+        profile.birthDate != nil ||
+        !(profile.goals?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true) ||
+        profile.photoData != nil
     }
 
     static func importWarning(
@@ -353,99 +365,12 @@ enum LocalBackupExporter {
         }
 
         do {
-            for workout in try context.fetch(CDWorkout.fetchRequest()) {
-                context.delete(workout)
-            }
-            for activity in try context.fetch(CDActivity.fetchRequest()) {
-                context.delete(activity)
-            }
-            for profile in try context.fetch(CDUserProfile.fetchRequest()) {
-                context.delete(profile)
-            }
+            try deleteExistingData(in: context)
 
-            let profile = CDUserProfile(context: context)
-            profile.name = profileSnapshot.name
-            profile.createdAt = profileSnapshot.createdAt
-            profile.birthDate = profileSnapshot.birthDate
-            profile.goals = profileSnapshot.goals
-            profile.heightCm = profileSnapshot.heightCm
-            if let base64 = profileSnapshot.photoDataBase64 {
-                profile.photoData = Data(base64Encoded: base64)
-            } else {
-                profile.photoData = nil
-            }
-
-            for measurementSnapshot in snapshot.measurements {
-                let measurement = CDBodyMeasurement(context: context)
-                measurement.id = measurementSnapshot.id
-                measurement.date = measurementSnapshot.date
-                measurement.weightKg = measurementSnapshot.weightKg
-                measurement.bodyFatPercent = measurementSnapshot.bodyFatPercent
-                measurement.notes = measurementSnapshot.notes
-                measurement.profile = profile
-            }
-
-            var activitiesByID: [UUID: CDActivity] = [:]
-            for activitySnapshot in snapshot.activities {
-                let activity = CDActivity(context: context)
-                activity.id = activitySnapshot.id
-                activity.name = activitySnapshot.name
-                activity.category = activitySnapshot.category
-                activity.icon = activitySnapshot.icon
-                activity.primaryMetric = activitySnapshot.primaryMetric
-                activity.isPreset = activitySnapshot.isPreset
-                activity.instructions = activitySnapshot.instructions
-                activity.muscleGroups = activitySnapshot.muscleGroups
-                activity.createdAt = activitySnapshot.createdAt
-
-                if let id = activitySnapshot.id {
-                    activitiesByID[id] = activity
-                }
-            }
-
-            for workoutSnapshot in snapshot.workouts {
-                let workout = CDWorkout(context: context)
-                workout.id = workoutSnapshot.id
-                workout.title = workoutSnapshot.title
-                workout.date = workoutSnapshot.date
-                workout.startedAt = workoutSnapshot.startedAt
-                workout.durationMinutes = workoutSnapshot.durationMinutes
-                workout.energyLevel = workoutSnapshot.energyLevel
-                workout.isCompleted = workoutSnapshot.isCompleted
-                workout.notes = workoutSnapshot.notes
-
-                for entrySnapshot in workoutSnapshot.entries {
-                    let entry = CDWorkoutEntry(context: context)
-                    entry.id = entrySnapshot.id
-                    entry.orderIndex = entrySnapshot.orderIndex
-                    entry.notes = entrySnapshot.notes
-                    entry.workout = workout
-
-                    if let activityID = entrySnapshot.activityID,
-                       let activity = activitiesByID[activityID] {
-                        entry.activity = activity
-                    } else if let activityName = entrySnapshot.activityName,
-                              let fallback = activitiesByID.values.first(where: { $0.name == activityName }) {
-                        entry.activity = fallback
-                    }
-
-                    for setSnapshot in entrySnapshot.sets {
-                        let set = CDEntrySet(context: context)
-                        set.id = setSnapshot.id
-                        set.setNumber = setSnapshot.setNumber
-                        set.weightKg = setSnapshot.weightKg
-                        set.reps = setSnapshot.reps
-                        set.distanceMeters = setSnapshot.distanceMeters
-                        set.durationSeconds = setSnapshot.durationSeconds
-                        set.laps = setSnapshot.laps
-                        set.customValue = setSnapshot.customValue
-                        set.customLabel = setSnapshot.customLabel
-                        set.notes = setSnapshot.notes
-                        set.isPRAttempt = setSnapshot.isPRAttempt
-                        set.entry = entry
-                    }
-                }
-            }
+            let profile = restoreProfile(profileSnapshot, into: context)
+            restoreMeasurements(snapshot.measurements, profile: profile, into: context)
+            let activitiesByID = restoreActivities(snapshot.activities, into: context)
+            restoreWorkouts(snapshot.workouts, activitiesByID: activitiesByID, into: context)
 
             try context.saveIfChanged()
         } catch let error as ImportError {
@@ -454,6 +379,143 @@ enum LocalBackupExporter {
         } catch {
             context.rollback()
             throw ImportError.writeFailure(error)
+        }
+    }
+
+    private static func deleteExistingData(in context: NSManagedObjectContext) throws {
+        for workout in try context.fetch(CDWorkout.fetchRequest()) {
+            context.delete(workout)
+        }
+        for activity in try context.fetch(CDActivity.fetchRequest()) {
+            context.delete(activity)
+        }
+        for profile in try context.fetch(CDUserProfile.fetchRequest()) {
+            context.delete(profile)
+        }
+    }
+
+    @discardableResult
+    private static func restoreProfile(_ snapshot: ProfileSnapshot, into context: NSManagedObjectContext) -> CDUserProfile {
+        let profile = CDUserProfile(context: context)
+        profile.name = snapshot.name
+        profile.createdAt = snapshot.createdAt
+        profile.birthDate = snapshot.birthDate
+        profile.goals = snapshot.goals
+        profile.heightCm = snapshot.heightCm
+        profile.photoData = snapshot.photoDataBase64.flatMap { Data(base64Encoded: $0) }
+        return profile
+    }
+
+    private static func restoreMeasurements(
+        _ snapshots: [MeasurementSnapshot],
+        profile: CDUserProfile,
+        into context: NSManagedObjectContext
+    ) {
+        for snapshot in snapshots {
+            let measurement = CDBodyMeasurement(context: context)
+            measurement.id = snapshot.id
+            measurement.date = snapshot.date
+            measurement.weightKg = snapshot.weightKg
+            measurement.bodyFatPercent = snapshot.bodyFatPercent
+            measurement.notes = snapshot.notes
+            measurement.profile = profile
+        }
+    }
+
+    private static func restoreActivities(
+        _ snapshots: [ActivitySnapshot],
+        into context: NSManagedObjectContext
+    ) -> [UUID: CDActivity] {
+        var activitiesByID: [UUID: CDActivity] = [:]
+
+        for snapshot in snapshots {
+            let activity = CDActivity(context: context)
+            activity.id = snapshot.id
+            activity.name = snapshot.name
+            activity.category = snapshot.category
+            activity.icon = snapshot.icon
+            activity.primaryMetric = snapshot.primaryMetric
+            activity.isPreset = snapshot.isPreset
+            activity.instructions = snapshot.instructions
+            activity.muscleGroups = snapshot.muscleGroups
+            activity.createdAt = snapshot.createdAt
+
+            if let id = snapshot.id {
+                activitiesByID[id] = activity
+            }
+        }
+
+        return activitiesByID
+    }
+
+    private static func restoreWorkouts(
+        _ snapshots: [WorkoutSnapshot],
+        activitiesByID: [UUID: CDActivity],
+        into context: NSManagedObjectContext
+    ) {
+        for snapshot in snapshots {
+            let workout = CDWorkout(context: context)
+            workout.id = snapshot.id
+            workout.title = snapshot.title
+            workout.date = snapshot.date
+            workout.startedAt = snapshot.startedAt
+            workout.durationMinutes = snapshot.durationMinutes
+            workout.energyLevel = snapshot.energyLevel
+            workout.isCompleted = snapshot.isCompleted
+            workout.notes = snapshot.notes
+
+            restoreEntries(snapshot.entries, workout: workout, activitiesByID: activitiesByID, into: context)
+        }
+    }
+
+    private static func restoreEntries(
+        _ snapshots: [WorkoutEntrySnapshot],
+        workout: CDWorkout,
+        activitiesByID: [UUID: CDActivity],
+        into context: NSManagedObjectContext
+    ) {
+        for snapshot in snapshots {
+            let entry = CDWorkoutEntry(context: context)
+            entry.id = snapshot.id
+            entry.orderIndex = snapshot.orderIndex
+            entry.notes = snapshot.notes
+            entry.workout = workout
+            entry.activity = resolvedActivity(for: snapshot, activitiesByID: activitiesByID)
+
+            restoreSets(snapshot.sets, entry: entry, into: context)
+        }
+    }
+
+    private static func resolvedActivity(
+        for snapshot: WorkoutEntrySnapshot,
+        activitiesByID: [UUID: CDActivity]
+    ) -> CDActivity? {
+        if let activityID = snapshot.activityID, let activity = activitiesByID[activityID] {
+            return activity
+        }
+        guard let activityName = snapshot.activityName else { return nil }
+        return activitiesByID.values.first { $0.name == activityName }
+    }
+
+    private static func restoreSets(
+        _ snapshots: [WorkoutSetSnapshot],
+        entry: CDWorkoutEntry,
+        into context: NSManagedObjectContext
+    ) {
+        for snapshot in snapshots {
+            let set = CDEntrySet(context: context)
+            set.id = snapshot.id
+            set.setNumber = snapshot.setNumber
+            set.weightKg = snapshot.weightKg
+            set.reps = snapshot.reps
+            set.distanceMeters = snapshot.distanceMeters
+            set.durationSeconds = snapshot.durationSeconds
+            set.laps = snapshot.laps
+            set.customValue = snapshot.customValue
+            set.customLabel = snapshot.customLabel
+            set.notes = snapshot.notes
+            set.isPRAttempt = snapshot.isPRAttempt
+            set.entry = entry
         }
     }
 }

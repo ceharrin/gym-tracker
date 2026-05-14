@@ -82,7 +82,7 @@ private struct ActivityExportCard: View {
                 .padding(.vertical, 16)
         } else {
             Chart {
-                ForEach(points, id: \.date) { point in
+                ForEach(points) { point in
                     LineMark(
                         x: .value("Date", point.date),
                         y: .value(yLabel, point.value)

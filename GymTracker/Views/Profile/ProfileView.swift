@@ -37,15 +37,12 @@ struct ProfileView: View {
 
     private var profile: CDUserProfile? { profiles.first }
     private var hasMeaningfulBackupData: Bool {
-        if !workouts.isEmpty || !measurements.isEmpty || !customActivities.isEmpty {
-            return true
-        }
-        guard let profile else { return false }
-        return !profile.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-            profile.heightCm > 0 ||
-            profile.birthDate != nil ||
-            !(profile.goals?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true) ||
-            profile.photoData != nil
+        LocalBackupExporter.hasMeaningfulData(
+            workoutCount: workouts.count,
+            measurementCount: measurements.count,
+            customActivityCount: customActivities.count,
+            hasProfileDetails: hasMeaningfulProfileDetails
+        )
     }
 
     var body: some View {
@@ -157,7 +154,7 @@ struct ProfileView: View {
             } label: {
                 HStack {
                     if isExportingBackup {
-                        ProgressView()
+                        SwiftUI.ProgressView()
                             .controlSize(.small)
                     } else {
                         Image(systemName: "square.and.arrow.up")
@@ -177,7 +174,7 @@ struct ProfileView: View {
             } label: {
                 HStack {
                     if isImportingBackup {
-                        ProgressView()
+                        SwiftUI.ProgressView()
                             .controlSize(.small)
                     } else {
                         Image(systemName: "square.and.arrow.down")
@@ -240,12 +237,7 @@ struct ProfileView: View {
     }
 
     private var hasMeaningfulProfileDetails: Bool {
-        guard let profile else { return false }
-        return !profile.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-            profile.heightCm > 0 ||
-            profile.birthDate != nil ||
-            !(profile.goals?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ?? true) ||
-            profile.photoData != nil
+        profile.map(LocalBackupExporter.hasMeaningfulProfileDetails) ?? false
     }
 
     private func beginBackupImport(from fileURL: URL) {

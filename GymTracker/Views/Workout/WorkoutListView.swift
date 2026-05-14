@@ -46,11 +46,8 @@ struct WorkoutListView: View {
         max(workouts.count - visibleWorkouts.count, 0)
     }
 
-    private var grouped: [(String, [CDWorkout])] {
-        let fmt = DateFormatter()
-        fmt.dateFormat = "MMMM yyyy"
-        let dict = Dictionary(grouping: visibleWorkouts) { fmt.string(from: $0.date) }
-        return dict.sorted { $0.key > $1.key }.map { ($0.key, $0.value.sorted { $0.date > $1.date }) }
+    private var grouped: [WorkoutHistoryMonthGroup] {
+        WorkoutHistoryDisplayPolicy.groupedByMonth(workouts: visibleWorkouts)
     }
 
     var body: some View {
@@ -63,9 +60,9 @@ struct WorkoutListView: View {
                         emptyState
                     } else {
                         List {
-                            ForEach(grouped, id: \.0) { month, items in
+                            ForEach(grouped) { group in
                                 Section {
-                                    ForEach(items) { workout in
+                                    ForEach(group.workouts) { workout in
                                         Button {
                                             navigationPath.append(WorkoutNavigationRoute(workout: workout))
                                         } label: {
@@ -73,9 +70,9 @@ struct WorkoutListView: View {
                                         }
                                         .buttonStyle(.plain)
                                     }
-                                    .onDelete { delete(items: items, offsets: $0) }
+                                    .onDelete { delete(items: group.workouts, offsets: $0) }
                                 } header: {
-                                    Text(month)
+                                    Text(group.title)
                                         .font(.caption)
                                         .fontWeight(.bold)
                                         .tracking(1.2)
