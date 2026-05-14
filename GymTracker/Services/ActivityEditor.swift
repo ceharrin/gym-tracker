@@ -3,15 +3,12 @@ import CoreData
 
 enum ActivityEditorError: LocalizedError {
     case presetActivitiesCannotBeModified
-    case repsOnlyMetricRequiresCustomCategory
     case emptyName
 
     var errorDescription: String? {
         switch self {
         case .presetActivitiesCannotBeModified:
             return "Preset activities can't be edited or deleted."
-        case .repsOnlyMetricRequiresCustomCategory:
-            return "Reps Only is available only for custom activities."
         case .emptyName:
             return "Activity name can't be empty."
         }
@@ -28,6 +25,13 @@ enum ActivityEditor {
     }
 
     static func availableMetrics(for category: ActivityCategory) -> [PrimaryMetric] {
+        availableMetrics(for: category, allowsRepsOnly: category == .custom)
+    }
+
+    static func availableMetrics(for category: ActivityCategory, allowsRepsOnly: Bool) -> [PrimaryMetric] {
+        if allowsRepsOnly {
+            return PrimaryMetric.allCases
+        }
         if category == .custom {
             return PrimaryMetric.allCases
         }
@@ -76,9 +80,6 @@ enum ActivityEditor {
         }
         if data.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
             throw ActivityEditorError.emptyName
-        }
-        if data.metric == .reps && data.category != .custom {
-            throw ActivityEditorError.repsOnlyMetricRequiresCustomCategory
         }
     }
 

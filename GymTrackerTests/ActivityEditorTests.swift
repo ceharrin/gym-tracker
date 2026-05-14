@@ -52,6 +52,23 @@ final class ActivityEditorTests: XCTestCase {
         XCTAssertFalse(activity.isPreset)
     }
 
+    func test_saveCustomStrengthActivity_persistsRepsOnlyMetric() throws {
+        let activity = try ActivityEditor.save(
+            data: .init(
+                name: "Push Ups",
+                category: .strength,
+                metric: .reps,
+                muscleGroups: "Chest, Triceps",
+                instructions: "AMRAP"
+            ),
+            context: context
+        )
+
+        XCTAssertEqual(activity.metric, .reps)
+        XCTAssertEqual(activity.category, ActivityCategory.strength.rawValue)
+        XCTAssertFalse(activity.isPreset)
+    }
+
     func test_saveCustomActivity_trimsAndPersistsFields() throws {
         let activity = try ActivityEditor.save(
             data: .init(
@@ -124,18 +141,9 @@ final class ActivityEditorTests: XCTestCase {
         XCTAssertThrowsError(try ActivityEditor.delete(preset, from: context))
     }
 
-    func test_nonCustomActivityCannotPersistRepsMetric() throws {
-        XCTAssertThrowsError(
-            try ActivityEditor.save(
-                data: .init(
-                    name: "Rowing",
-                    category: .cardio,
-                    metric: .reps,
-                    muscleGroups: "",
-                    instructions: ""
-                ),
-                context: context
-            )
+    func test_availableMetrics_whenRepsOnlyAllowed_includesRepsForStrength() {
+        XCTAssertTrue(
+            ActivityEditor.availableMetrics(for: .strength, allowsRepsOnly: true).contains(.reps)
         )
     }
 }

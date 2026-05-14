@@ -19,7 +19,7 @@ struct AddActivityView: View {
     @State private var showingDeleteAlert = false
 
     private var availableMetrics: [PrimaryMetric] {
-        ActivityEditor.availableMetrics(for: category)
+        ActivityEditor.availableMetrics(for: category, allowsRepsOnly: true)
     }
 
     private var isEditing: Bool {
@@ -39,7 +39,7 @@ struct AddActivityView: View {
                         }
                     }
                     .onChange(of: category) { _, newValue in
-                        let allowed = ActivityEditor.availableMetrics(for: newValue)
+                        let allowed = ActivityEditor.availableMetrics(for: newValue, allowsRepsOnly: true)
                         if !allowed.contains(metric) {
                             metric = allowed.contains(newValue.defaultMetric) ? newValue.defaultMetric : (allowed.first ?? .weightReps)
                         }
