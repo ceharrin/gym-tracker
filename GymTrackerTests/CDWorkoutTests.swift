@@ -25,12 +25,17 @@ final class CDWorkoutTests: XCTestCase {
         return w
     }
 
-    private func makeActivity(name: String, category: ActivityCategory = .strength) -> CDActivity {
+    private func makeActivity(
+        name: String,
+        category: ActivityCategory = .strength,
+        muscleGroups: String? = nil
+    ) -> CDActivity {
         let a = CDActivity(context: context)
         a.id = UUID()
         a.name = name
         a.category = category.rawValue
         a.primaryMetric = category.defaultMetric.rawValue
+        a.muscleGroups = muscleGroups
         a.isPreset = true
         return a
     }
@@ -186,6 +191,74 @@ final class CDWorkoutTests: XCTestCase {
         makeSet(entry: entry, weightKg: 50, reps: 4)
 
         XCTAssertEqual(workout.displayableTotalMetrics, [.weightVolume, .reps])
+    }
+
+    func test_muscleCoverage_mapsStrengthActivityMuscleGroupsToMajorGroups() {
+        let workout = makeWorkout()
+        let push = makeEntry(
+            workout: workout,
+            activity: makeActivity(name: "Bench Press", muscleGroups: "Chest, Triceps"),
+            orderIndex: 0
+        )
+        makeSet(entry: push, weightKg: 80, reps: 8)
+
+        let pull = makeEntry(
+            workout: workout,
+            activity: makeActivity(name: "Pulldown", muscleGroups: "Lats, Biceps"),
+            orderIndex: 1
+        )
+        makeSet(entry: pull, weightKg: 60, reps: 10)
+
+        let coverage = workout.muscleCoverage
+
+        XCTAssertEqual(coverage.targetedGroups, ["Chest", "Back", "Biceps", "Triceps"])
+        XCTAssertEqual(coverage.untargetedGroups, [
+            "Shoulders",
+            "Quads",
+            "Hamstrings",
+            "Glutes",
+            "Calves",
+            "Core",
+            "Forearms",
+            "Traps"
+        ])
+        XCTAssertEqual(coverage.targetedCount, 4)
+        XCTAssertEqual(coverage.totalCount, 12)
+        XCTAssertEqual(coverage.percentage, 33.333, accuracy: 0.01)
+        XCTAssertEqual(WorkoutTotalMetric.muscleCoverage.formattedValue(from: workout), "33%")
+    }
+
+    func test_muscleCoverage_ignoresCardioAndStrengthEntriesWithoutSets() {
+        let workout = makeWorkout()
+        makeEntry(
+            workout: workout,
+            activity: makeActivity(name: "Empty Squat", muscleGroups: "Legs"),
+            orderIndex: 0
+        )
+
+        let cardio = makeEntry(
+            workout: workout,
+            activity: makeActivity(name: "Run", category: .cardio, muscleGroups: "Full Body"),
+            orderIndex: 1
+        )
+        makeSet(entry: cardio, distanceMeters: 1609.344, durationSeconds: 600)
+
+        XCTAssertTrue(workout.muscleCoverage.targetedGroups.isEmpty)
+        XCTAssertEqual(workout.muscleCoverage.percentage, 0, accuracy: 0.001)
+        XCTAssertFalse(workout.displayableTotalMetrics.contains(.muscleCoverage))
+    }
+
+    func test_muscleCoverage_fullBodyMapsToAllMajorGroups() {
+        let workout = makeWorkout()
+        let entry = makeEntry(
+            workout: workout,
+            activity: makeActivity(name: "Clean and Press", muscleGroups: "Full Body")
+        )
+        makeSet(entry: entry, weightKg: 70, reps: 3)
+
+        XCTAssertEqual(workout.muscleCoverage.targetedGroups, MuscleCoverage.majorMuscleGroups)
+        XCTAssertEqual(workout.muscleCoverage.percentage, 100, accuracy: 0.001)
+        XCTAssertTrue(workout.displayableTotalMetrics.contains(.muscleCoverage))
     }
 
     func test_workoutTotalChartPoints_filtersEmptyAndOutOfRangeWorkouts() {

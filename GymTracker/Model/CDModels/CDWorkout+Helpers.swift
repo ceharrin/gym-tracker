@@ -20,6 +20,96 @@ struct WorkoutTotals {
     }
 }
 
+struct MuscleCoverage {
+    static let majorMuscleGroups: [String] = [
+        "Chest",
+        "Back",
+        "Shoulders",
+        "Biceps",
+        "Triceps",
+        "Quads",
+        "Hamstrings",
+        "Glutes",
+        "Calves",
+        "Core",
+        "Forearms",
+        "Traps"
+    ]
+
+    let targetedGroups: [String]
+
+    var targetedCount: Int { targetedGroups.count }
+    var totalCount: Int { Self.majorMuscleGroups.count }
+    var untargetedGroups: [String] {
+        Self.majorMuscleGroups.filter { !targetedGroups.contains($0) }
+    }
+
+    var percentage: Double {
+        guard totalCount > 0 else { return 0 }
+        return (Double(targetedCount) / Double(totalCount)) * 100
+    }
+
+    var displayText: String {
+        "\(Int(percentage.rounded()))%"
+    }
+
+    var detailText: String {
+        targetedGroups.isEmpty
+            ? "No strength muscle groups logged"
+            : "\(targetedCount) of \(totalCount) major groups"
+    }
+
+    static func from(muscleGroupText values: [String]) -> MuscleCoverage {
+        let targeted = Set(values.flatMap { value in
+            value
+                .split(separator: ",")
+                .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+                .flatMap(Self.majorGroups(for:))
+        })
+
+        return MuscleCoverage(
+            targetedGroups: Self.majorMuscleGroups.filter { targeted.contains($0) }
+        )
+    }
+
+    private static func majorGroups(for rawName: String) -> [String] {
+        switch rawName.lowercased() {
+        case "chest", "upper chest":
+            return ["Chest"]
+        case "back", "lats", "upper back", "lower back":
+            return ["Back"]
+        case "shoulders", "front delts", "lateral delts", "rear delts", "rotator cuff":
+            return ["Shoulders"]
+        case "biceps", "brachialis":
+            return ["Biceps"]
+        case "triceps":
+            return ["Triceps"]
+        case "quads":
+            return ["Quads"]
+        case "hamstrings":
+            return ["Hamstrings"]
+        case "glutes", "glute medius", "adductors":
+            return ["Glutes"]
+        case "calves":
+            return ["Calves"]
+        case "core", "obliques", "hip flexors":
+            return ["Core"]
+        case "forearms":
+            return ["Forearms"]
+        case "traps":
+            return ["Traps"]
+        case "arms":
+            return ["Biceps", "Triceps", "Forearms"]
+        case "legs":
+            return ["Quads", "Hamstrings", "Glutes", "Calves"]
+        case "full body":
+            return Self.majorMuscleGroups
+        default:
+            return []
+        }
+    }
+}
+
 enum WorkoutTotalMetric: String, CaseIterable, Identifiable {
     case weightVolume
     case reps
@@ -27,6 +117,7 @@ enum WorkoutTotalMetric: String, CaseIterable, Identifiable {
     case duration
     case laps
     case custom
+    case muscleCoverage
 
     var id: String { rawValue }
 
@@ -38,6 +129,7 @@ enum WorkoutTotalMetric: String, CaseIterable, Identifiable {
         case .duration: return "Duration"
         case .laps: return "Laps"
         case .custom: return "Custom"
+        case .muscleCoverage: return "Muscles Targeted"
         }
     }
 
@@ -49,6 +141,7 @@ enum WorkoutTotalMetric: String, CaseIterable, Identifiable {
         case .duration: return "timer"
         case .laps: return "oval"
         case .custom: return "star.fill"
+        case .muscleCoverage: return "figure.strengthtraining.traditional"
         }
     }
 
@@ -60,6 +153,7 @@ enum WorkoutTotalMetric: String, CaseIterable, Identifiable {
         case .duration: return "min"
         case .laps: return "laps"
         case .custom: return "value"
+        case .muscleCoverage: return "%"
         }
     }
 
@@ -72,6 +166,7 @@ enum WorkoutTotalMetric: String, CaseIterable, Identifiable {
         case .duration: return Double(totals.totalDurationSeconds) / 60.0
         case .laps: return Double(totals.totalLaps)
         case .custom: return totals.totalCustomValue
+        case .muscleCoverage: return workout.muscleCoverage.percentage
         }
     }
 
@@ -93,6 +188,8 @@ enum WorkoutTotalMetric: String, CaseIterable, Identifiable {
             return "\(Int(value.rounded())) laps"
         case .custom:
             return String(format: "%.1f", value)
+        case .muscleCoverage:
+            return "\(Int(value.rounded()))%"
         }
     }
 
@@ -145,6 +242,15 @@ extension CDWorkout {
 
     var displayableTotalMetrics: [WorkoutTotalMetric] {
         WorkoutTotalMetric.allCases.filter { $0.value(from: self) > 0 }
+    }
+
+    var muscleCoverage: MuscleCoverage {
+        let muscleGroupText = sortedEntries.compactMap { entry -> String? in
+            guard entry.activity?.activityCategory == .strength else { return nil }
+            guard !entry.sortedSets.isEmpty else { return nil }
+            return entry.activity?.muscleGroups
+        }
+        return MuscleCoverage.from(muscleGroupText: muscleGroupText)
     }
 
     var activitySummary: String {

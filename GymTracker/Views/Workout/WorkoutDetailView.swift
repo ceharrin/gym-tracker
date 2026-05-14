@@ -14,6 +14,7 @@ struct WorkoutDetailView: View {
     @State private var shareError: String? = nil
     @State private var isExportingShare = false
     @State private var persistenceAlert: PersistenceAlertState? = nil
+    @State private var showingMuscleCoverageDetails = false
 
     var body: some View {
         Group {
@@ -101,6 +102,10 @@ struct WorkoutDetailView: View {
                 ShareSheet(items: [url])
             }
         }
+        .sheet(isPresented: $showingMuscleCoverageDetails) {
+            MuscleCoverageDetailSheet(workout: workout)
+                .presentationDetents([.medium, .large])
+        }
         .alert("Couldn't Export Workout", isPresented: Binding(
             get: { shareError != nil },
             set: { if !$0 { shareError = nil } }
@@ -160,8 +165,9 @@ struct WorkoutDetailView: View {
         }
     }
 
+    @ViewBuilder
     private func workoutTotalTile(_ metric: WorkoutTotalMetric) -> some View {
-        HStack(spacing: 10) {
+        let content = HStack(spacing: 10) {
             Image(systemName: metric.icon)
                 .font(.subheadline)
                 .foregroundStyle(Color.accentColor)
@@ -179,13 +185,39 @@ struct WorkoutDetailView: View {
                     .fontWeight(.semibold)
                     .lineLimit(1)
                     .minimumScaleFactor(0.75)
+                if metric == .muscleCoverage {
+                    Text(workout.muscleCoverage.detailText)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                }
             }
 
             Spacer(minLength: 0)
+
+            if metric == .muscleCoverage {
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.tertiary)
+            }
         }
         .padding(10)
         .background(Color(uiColor: .tertiarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 12))
+
+        if metric == .muscleCoverage {
+            Button {
+                showingMuscleCoverageDetails = true
+            } label: {
+                content
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Shows muscle coverage details")
+        } else {
+            content
+        }
     }
 
     private func metaStat(label: String, value: Date, style: Text.DateStyle) -> some View {
@@ -241,6 +273,116 @@ struct WorkoutDetailView: View {
         .padding(16)
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+// MARK: - Muscle Coverage
+
+private struct MuscleCoverageDetailSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var workout: CDWorkout
+
+    private var coverage: MuscleCoverage {
+        workout.muscleCoverage
+    }
+
+    private var contributingEntries: [CDWorkoutEntry] {
+        workout.sortedEntries.filter { entry in
+            guard entry.activity?.activityCategory == .strength else { return false }
+            guard !entry.sortedSets.isEmpty else { return false }
+            return !(entry.activity?.muscleGroups ?? "").isEmpty
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    VStack(alignment: .leading, spacing: 12) {
+                        HStack(alignment: .firstTextBaseline) {
+                            Text(coverage.displayText)
+                                .font(.system(size: 42, weight: .bold, design: .rounded))
+                                .monospacedDigit()
+                            Text("of major muscle groups")
+                                .font(.subheadline)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        SwiftUI.ProgressView(value: Double(coverage.targetedCount), total: Double(coverage.totalCount))
+                            .tint(Color.accentColor)
+
+                        Text(coverage.detailText)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(.vertical, 4)
+                }
+
+                Section("Targeted") {
+                    if coverage.targetedGroups.isEmpty {
+                        Text("No strength muscle groups were logged for this workout.")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        MuscleGroupGrid(groups: coverage.targetedGroups, isTargeted: true)
+                    }
+                }
+
+                Section("Not Targeted") {
+                    MuscleGroupGrid(groups: coverage.untargetedGroups, isTargeted: false)
+                }
+
+                if !contributingEntries.isEmpty {
+                    Section("Exercises Counted") {
+                        ForEach(contributingEntries) { entry in
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text(entry.activity?.name ?? "Unknown")
+                                    .font(.subheadline)
+                                    .fontWeight(.semibold)
+                                Text(entry.activity?.muscleGroups ?? "")
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                            }
+                            .padding(.vertical, 2)
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Muscles Targeted")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+private struct MuscleGroupGrid: View {
+    let groups: [String]
+    let isTargeted: Bool
+
+    private let columns = [
+        GridItem(.adaptive(minimum: 92), spacing: 8)
+    ]
+
+    var body: some View {
+        LazyVGrid(columns: columns, alignment: .leading, spacing: 8) {
+            ForEach(groups, id: \.self) { group in
+                Label(group, systemImage: isTargeted ? "checkmark.circle.fill" : "circle")
+                    .font(.caption)
+                    .fontWeight(.medium)
+                    .foregroundStyle(isTargeted ? Color.accentColor : .secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 6)
+                    .background(isTargeted ? Color.accentColor.opacity(0.12) : Color(.tertiarySystemBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+        }
+        .padding(.vertical, 2)
     }
 }
 
