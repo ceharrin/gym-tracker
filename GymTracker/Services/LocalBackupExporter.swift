@@ -220,75 +220,93 @@ enum LocalBackupExporter {
         return BackupSnapshot(
             app: "GymTracker",
             exportedAt: Date(),
-            profiles: profiles.map {
-                ProfileSnapshot(
-                    id: nil,
-                    name: $0.name,
-                    createdAt: $0.createdAt,
-                    birthDate: $0.birthDate,
-                    goals: $0.goals,
-                    heightCm: $0.heightCm,
-                    photoDataBase64: $0.photoData?.base64EncodedString()
-                )
-            },
-            measurements: measurements.sorted { $0.date < $1.date }.map {
-                MeasurementSnapshot(
-                    id: $0.id,
-                    date: $0.date,
-                    weightKg: $0.weightKg,
-                    bodyFatPercent: $0.bodyFatPercent,
-                    notes: $0.notes
-                )
-            },
-            activities: activities.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }.map {
-                ActivitySnapshot(
-                    id: $0.id,
-                    name: $0.name,
-                    category: $0.category,
-                    icon: $0.icon,
-                    primaryMetric: $0.primaryMetric,
-                    isPreset: $0.isPreset,
-                    instructions: $0.instructions,
-                    muscleGroups: $0.muscleGroups,
-                    createdAt: $0.createdAt
-                )
-            },
-            workouts: workouts.sorted { $0.date > $1.date }.map { workout in
-                WorkoutSnapshot(
-                    id: workout.id,
-                    title: workout.title,
-                    date: workout.date,
-                    startedAt: workout.startedAt,
-                    durationMinutes: workout.durationMinutes,
-                    energyLevel: workout.energyLevel,
-                    isCompleted: workout.isCompleted,
-                    notes: workout.notes,
-                    entries: workout.sortedEntries.map { entry in
-                        WorkoutEntrySnapshot(
-                            id: entry.id,
-                            activityID: entry.activity?.id,
-                            activityName: entry.activity?.name,
-                            notes: entry.notes,
-                            orderIndex: entry.orderIndex,
-                            sets: entry.sortedSets.map { set in
-                                WorkoutSetSnapshot(
-                                    id: set.id,
-                                    setNumber: set.setNumber,
-                                    weightKg: set.weightKg,
-                                    reps: set.reps,
-                                    distanceMeters: set.distanceMeters,
-                                    durationSeconds: set.durationSeconds,
-                                    laps: set.laps,
-                                    customValue: set.customValue,
-                                    customLabel: set.customLabel,
-                                    notes: set.notes,
-                                    isPRAttempt: set.isPRAttempt
-                                )
-                            }
-                        )
-                    }
-                )
-            }
+            profiles: profiles.map { profileSnapshot(from: $0) },
+            measurements: measurements
+                .sorted { $0.date < $1.date }
+                .map { measurementSnapshot(from: $0) },
+            activities: activities
+                .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+                .map { activitySnapshot(from: $0) },
+            workouts: workouts
+                .sorted { $0.date > $1.date }
+                .map { workoutSnapshot(from: $0) }
+        )
+    }
+
+    private static func profileSnapshot(from profile: CDUserProfile) -> ProfileSnapshot {
+        ProfileSnapshot(
+            id: nil,
+            name: profile.name,
+            createdAt: profile.createdAt,
+            birthDate: profile.birthDate,
+            goals: profile.goals,
+            heightCm: profile.heightCm,
+            photoDataBase64: profile.photoData?.base64EncodedString()
+        )
+    }
+
+    private static func measurementSnapshot(from measurement: CDBodyMeasurement) -> MeasurementSnapshot {
+        MeasurementSnapshot(
+            id: measurement.id,
+            date: measurement.date,
+            weightKg: measurement.weightKg,
+            bodyFatPercent: measurement.bodyFatPercent,
+            notes: measurement.notes
+        )
+    }
+
+    private static func activitySnapshot(from activity: CDActivity) -> ActivitySnapshot {
+        ActivitySnapshot(
+            id: activity.id,
+            name: activity.name,
+            category: activity.category,
+            icon: activity.icon,
+            primaryMetric: activity.primaryMetric,
+            isPreset: activity.isPreset,
+            instructions: activity.instructions,
+            muscleGroups: activity.muscleGroups,
+            createdAt: activity.createdAt
+        )
+    }
+
+    private static func workoutSnapshot(from workout: CDWorkout) -> WorkoutSnapshot {
+        WorkoutSnapshot(
+            id: workout.id,
+            title: workout.title,
+            date: workout.date,
+            startedAt: workout.startedAt,
+            durationMinutes: workout.durationMinutes,
+            energyLevel: workout.energyLevel,
+            isCompleted: workout.isCompleted,
+            notes: workout.notes,
+            entries: workout.sortedEntries.map { workoutEntrySnapshot(from: $0) }
+        )
+    }
+
+    private static func workoutEntrySnapshot(from entry: CDWorkoutEntry) -> WorkoutEntrySnapshot {
+        WorkoutEntrySnapshot(
+            id: entry.id,
+            activityID: entry.activity?.id,
+            activityName: entry.activity?.name,
+            notes: entry.notes,
+            orderIndex: entry.orderIndex,
+            sets: entry.sortedSets.map { workoutSetSnapshot(from: $0) }
+        )
+    }
+
+    private static func workoutSetSnapshot(from set: CDEntrySet) -> WorkoutSetSnapshot {
+        WorkoutSetSnapshot(
+            id: set.id,
+            setNumber: set.setNumber,
+            weightKg: set.weightKg,
+            reps: set.reps,
+            distanceMeters: set.distanceMeters,
+            durationSeconds: set.durationSeconds,
+            laps: set.laps,
+            customValue: set.customValue,
+            customLabel: set.customLabel,
+            notes: set.notes,
+            isPRAttempt: set.isPRAttempt
         )
     }
 

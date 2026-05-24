@@ -20,6 +20,26 @@ struct WorkoutTotals {
     }
 }
 
+struct WorkoutTotalsPresentation {
+    let metrics: [WorkoutTotalMetric]
+
+    init(workout: CDWorkout) {
+        metrics = workout.displayableTotalMetrics
+    }
+
+    var hasTotals: Bool {
+        !metrics.isEmpty
+    }
+
+    var buttonTitle: String {
+        "Workout Totals"
+    }
+
+    var buttonSubtitle: String {
+        "\(metrics.count) \(metrics.count == 1 ? "metric" : "metrics")"
+    }
+}
+
 struct MuscleCoverage {
     static let majorMuscleGroups: [String] = [
         "Chest",

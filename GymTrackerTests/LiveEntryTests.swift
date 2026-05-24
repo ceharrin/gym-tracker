@@ -125,6 +125,28 @@ final class LiveEntryTests: XCTestCase {
         XCTAssertEqual(entries.count, 2, "No entry should be removed when ID does not match")
     }
 
+    func test_addActivity_appendsNewEntryAtBottom() {
+        let squat = makeActivity(name: "Squat")
+        let bench = makeActivity(name: "Bench")
+        let deadlift = makeActivity(name: "Deadlift")
+        let entries = [LiveEntry(activity: squat), LiveEntry(activity: bench)]
+
+        let updated = WorkoutEntryDrafts.adding(activity: deadlift, to: entries)
+
+        XCTAssertEqual(updated.map(\.activity.name), ["Squat", "Bench", "Deadlift"])
+    }
+
+    func test_addActivityResult_tracksNewestEntryForFocus() {
+        let squat = makeActivity(name: "Squat")
+        let bench = makeActivity(name: "Bench")
+        let entries = [LiveEntry(activity: squat)]
+
+        let result = WorkoutEntryDrafts.addingFocused(activity: bench, to: entries)
+
+        XCTAssertEqual(result.entries.map(\.activity.name), ["Squat", "Bench"])
+        XCTAssertEqual(result.focusedEntryID, result.entries.last?.id)
+    }
+
     // MARK: - LiveEntry default state
 
     func test_liveEntry_defaultsToOneLiveSet() {

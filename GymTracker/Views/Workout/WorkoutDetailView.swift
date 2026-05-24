@@ -14,7 +14,7 @@ struct WorkoutDetailView: View {
     @State private var shareError: String? = nil
     @State private var isExportingShare = false
     @State private var persistenceAlert: PersistenceAlertState? = nil
-    @State private var showingMuscleCoverageDetails = false
+    @State private var showingWorkoutTotals = false
 
     var body: some View {
         Group {
@@ -24,7 +24,7 @@ struct WorkoutDetailView: View {
                 ScrollView {
                     VStack(spacing: 20) {
                         metaCard
-                        workoutTotalsCard
+                        workoutTotalsButton
                         ForEach(workout.sortedEntries) { entry in
                             EntryDetailCard(entry: entry)
                         }
@@ -102,8 +102,8 @@ struct WorkoutDetailView: View {
                 ShareSheet(items: [url])
             }
         }
-        .sheet(isPresented: $showingMuscleCoverageDetails) {
-            MuscleCoverageDetailSheet(workout: workout)
+        .sheet(isPresented: $showingWorkoutTotals) {
+            WorkoutTotalsDetailSheet(workout: workout)
                 .presentationDetents([.medium, .large])
         }
         .alert("Couldn't Export Workout", isPresented: Binding(
@@ -144,79 +144,44 @@ struct WorkoutDetailView: View {
     }
 
     @ViewBuilder
-    private var workoutTotalsCard: some View {
-        let metrics = workout.displayableTotalMetrics
-        if !metrics.isEmpty {
-            VStack(alignment: .leading, spacing: 12) {
-                Label("Workout Totals", systemImage: "sum")
-                    .font(.headline)
-                    .fontWeight(.semibold)
-
-                LazyVGrid(columns: [GridItem(.adaptive(minimum: 140), spacing: 10)], spacing: 10) {
-                    ForEach(metrics) { metric in
-                        workoutTotalTile(metric)
-                    }
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .background(Color(.secondarySystemBackground))
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-        }
-    }
-
-    @ViewBuilder
-    private func workoutTotalTile(_ metric: WorkoutTotalMetric) -> some View {
-        let content = HStack(spacing: 10) {
-            Image(systemName: metric.icon)
-                .font(.subheadline)
-                .foregroundStyle(Color.accentColor)
-                .frame(width: 28, height: 28)
-                .background(Color.accentColor.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(metric.title)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                Text(metric.formattedValue(from: workout))
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.75)
-                if metric == .muscleCoverage {
-                    Text(workout.muscleCoverage.detailText)
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                }
-            }
-
-            Spacer(minLength: 0)
-
-            if metric == .muscleCoverage {
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundStyle(.tertiary)
-            }
-        }
-        .padding(10)
-        .background(Color(uiColor: .tertiarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 12))
-
-        if metric == .muscleCoverage {
+    private var workoutTotalsButton: some View {
+        let presentation = WorkoutTotalsPresentation(workout: workout)
+        if presentation.hasTotals {
             Button {
-                showingMuscleCoverageDetails = true
+                showingWorkoutTotals = true
             } label: {
-                content
+                HStack(spacing: 12) {
+                    Image(systemName: "sum")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.accentColor)
+                        .frame(width: 32, height: 32)
+                        .background(Color.accentColor.opacity(0.12))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(presentation.buttonTitle)
+                            .font(.subheadline)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.primary)
+                        Text(presentation.buttonSubtitle)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+
+                    Spacer()
+
+                    Image(systemName: "chevron.right")
+                        .font(.caption)
+                        .fontWeight(.semibold)
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .background(Color(.secondarySystemBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 16))
             }
             .buttonStyle(.plain)
-            .accessibilityHint("Shows muscle coverage details")
-        } else {
-            content
+            .accessibilityHint("Shows workout total details")
         }
     }
 
@@ -273,6 +238,86 @@ struct WorkoutDetailView: View {
         .padding(16)
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+// MARK: - Workout Totals
+
+private struct WorkoutTotalsDetailSheet: View {
+    @Environment(\.dismiss) private var dismiss
+    @ObservedObject var workout: CDWorkout
+    @State private var showingMuscleCoverageDetails = false
+
+    private var presentation: WorkoutTotalsPresentation {
+        WorkoutTotalsPresentation(workout: workout)
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(presentation.metrics) { metric in
+                        if metric == .muscleCoverage {
+                            Button {
+                                showingMuscleCoverageDetails = true
+                            } label: {
+                                WorkoutTotalDetailRow(metric: metric, workout: workout)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityHint("Shows muscle coverage details")
+                        } else {
+                            WorkoutTotalDetailRow(metric: metric, workout: workout)
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $showingMuscleCoverageDetails) {
+                MuscleCoverageDetailSheet(workout: workout)
+                    .presentationDetents([.medium, .large])
+            }
+            .navigationTitle(presentation.buttonTitle)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+    }
+}
+
+private struct WorkoutTotalDetailRow: View {
+    let metric: WorkoutTotalMetric
+    @ObservedObject var workout: CDWorkout
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: metric.icon)
+                .font(.subheadline)
+                .foregroundStyle(Color.accentColor)
+                .frame(width: 32, height: 32)
+                .background(Color.accentColor.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(metric.title)
+                    .font(.subheadline)
+                    .fontWeight(.semibold)
+                if metric == .muscleCoverage {
+                    Text(workout.muscleCoverage.detailText)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
+
+            Spacer()
+
+            Text(metric.formattedValue(from: workout))
+                .font(.headline)
+                .monospacedDigit()
+                .foregroundStyle(.primary)
+        }
+        .padding(.vertical, 4)
     }
 }
 

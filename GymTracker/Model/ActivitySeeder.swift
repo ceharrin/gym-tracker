@@ -351,7 +351,7 @@ struct ActivitySeeder {
         ),
         Preset(
             name: "Assisted Pull-Up",
-            category: .strength, icon: "figure.strengthtraining.traditional", metric: .reps,
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
             muscles: "Lats, Biceps",
             instructions: "Set the assistance so you can move through a full range of motion.\nPull with your back and arms until your chin clears the bar.\nLower all the way back to the bottom under control."
         ),
@@ -465,7 +465,7 @@ struct ActivitySeeder {
         ),
         Preset(
             name: "Bulgarian Split Squat",
-            category: .strength, icon: "figure.strengthtraining.traditional", metric: .reps,
+            category: .strength, icon: "figure.strengthtraining.traditional", metric: .weightReps,
             muscles: "Quads, Glutes",
             instructions: "Place your back foot on a bench and keep most of your weight on the front leg.\nLower with control until the front thigh is near parallel.\nDrive back up through the front foot."
         ),
@@ -681,6 +681,7 @@ struct ActivitySeeder {
         }
 
         updateInstructionsIfNeeded(context: context)
+        updatePresetMetricsIfNeeded(context: context)
     }
 
     /// Removes duplicate preset activities that CloudKit sync can introduce after a reinstall.
@@ -731,5 +732,25 @@ struct ActivitySeeder {
         }
 
         try? context.save()
+    }
+
+    static func updatePresetMetricsIfNeeded(context: NSManagedObjectContext) {
+        let req = CDActivity.fetchRequest()
+        req.predicate = NSPredicate(format: "isPreset == true")
+        guard let activities = try? context.fetch(req), !activities.isEmpty else { return }
+
+        let metricsByName = Dictionary(uniqueKeysWithValues: presets.map { ($0.name, $0.metric.rawValue) })
+        var updatedAny = false
+
+        for activity in activities {
+            guard let expectedMetric = metricsByName[activity.name],
+                  activity.primaryMetric != expectedMetric else { continue }
+            activity.primaryMetric = expectedMetric
+            updatedAny = true
+        }
+
+        if updatedAny {
+            try? context.save()
+        }
     }
 }

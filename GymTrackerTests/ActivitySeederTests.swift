@@ -90,6 +90,31 @@ final class ActivitySeederTests: XCTestCase {
         XCTAssertNotNil(squat.createdAt)
     }
 
+    func test_presets_assistedPullUpAndBulgarianSplitSquatUseWeightAndReps() throws {
+        let metricsByName = Dictionary(uniqueKeysWithValues: ActivitySeeder.presets.map { ($0.name, $0.metric) })
+
+        XCTAssertEqual(metricsByName["Assisted Pull-Up"], .weightReps)
+        XCTAssertEqual(metricsByName["Bulgarian Split Squat"], .weightReps)
+    }
+
+    func test_seedIfNeeded_updatesExistingAssistedPullUpAndBulgarianSplitSquatMetrics() throws {
+        makePreset(name: "Assisted Pull-Up").primaryMetric = PrimaryMetric.reps.rawValue
+        makePreset(name: "Bulgarian Split Squat").primaryMetric = PrimaryMetric.reps.rawValue
+        try context.save()
+
+        ActivitySeeder.seedIfNeeded(context: context)
+
+        let request = CDActivity.fetchRequest()
+        request.predicate = NSPredicate(
+            format: "name IN %@",
+            ["Assisted Pull-Up", "Bulgarian Split Squat"]
+        )
+        let activities = try context.fetch(request)
+
+        XCTAssertEqual(activities.count, 2)
+        XCTAssertTrue(activities.allSatisfy { $0.primaryMetric == PrimaryMetric.weightReps.rawValue })
+    }
+
     func test_seedIfNeeded_populatesInstructions() throws {
         ActivitySeeder.seedIfNeeded(context: context)
 

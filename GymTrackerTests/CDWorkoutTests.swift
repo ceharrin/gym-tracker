@@ -193,6 +193,28 @@ final class CDWorkoutTests: XCTestCase {
         XCTAssertEqual(workout.displayableTotalMetrics, [.weightVolume, .reps])
     }
 
+    func test_workoutTotalsPresentation_isEmptyWhenWorkoutHasNoTotals() {
+        let workout = makeWorkout()
+
+        let presentation = WorkoutTotalsPresentation(workout: workout)
+
+        XCTAssertFalse(presentation.hasTotals)
+        XCTAssertEqual(presentation.metrics, [])
+    }
+
+    func test_workoutTotalsPresentation_includesDisplayableMetricsForDetailsSheet() {
+        let workout = makeWorkout()
+        let entry = makeEntry(workout: workout, activity: makeActivity(name: "Bench"))
+        makeSet(entry: entry, weightKg: 50, reps: 4)
+
+        let presentation = WorkoutTotalsPresentation(workout: workout)
+
+        XCTAssertTrue(presentation.hasTotals)
+        XCTAssertEqual(presentation.metrics, [.weightVolume, .reps])
+        XCTAssertEqual(presentation.buttonTitle, "Workout Totals")
+        XCTAssertEqual(presentation.buttonSubtitle, "2 metrics")
+    }
+
     func test_muscleCoverage_mapsStrengthActivityMuscleGroupsToMajorGroups() {
         let workout = makeWorkout()
         let push = makeEntry(

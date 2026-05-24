@@ -68,7 +68,6 @@ struct EntrySection: View {
     @Binding var entry: LiveEntry
     let onDeleteEntry: () -> Void
     @State private var showingTutorial = false
-    @State private var restTimerRestartToken = UUID()
 
     var body: some View {
         Section {
@@ -92,7 +91,6 @@ struct EntrySection: View {
             Button {
                 let newSet = entry.sets.last.map { LiveSet.copying($0) } ?? LiveSet()
                 entry.sets.append(newSet)
-                restTimerRestartToken = UUID()
             } label: {
                 Label("Add Set", systemImage: "plus")
                     .font(.caption)
@@ -106,10 +104,6 @@ struct EntrySection: View {
             .buttonStyle(.plain)
             .deleteDisabled(true)
             .listRowBackground(Color(.secondarySystemBackground))
-
-            RestTimerView(restartToken: restTimerRestartToken)
-                .deleteDisabled(true)
-                .listRowBackground(Color(.secondarySystemBackground))
         } header: {
             HStack {
                 Image(systemName: entry.activity.activityCategory.icon)
@@ -172,100 +166,6 @@ struct EntrySection: View {
         .font(.caption)
         .foregroundStyle(.secondary)
         .fontWeight(.medium)
-    }
-}
-
-enum RestTimerFormatter {
-    static func string(for elapsedSeconds: Int) -> String {
-        let clamped = max(elapsedSeconds, 0)
-        let hours = clamped / 3600
-        let minutes = (clamped % 3600) / 60
-        let seconds = clamped % 60
-
-        if hours > 0 {
-            return String(format: "%d:%02d:%02d", hours, minutes, seconds)
-        }
-        return String(format: "%d:%02d", minutes, seconds)
-    }
-}
-
-struct RestTimerState {
-    private(set) var startedAt: Date?
-    private(set) var accumulatedSeconds: TimeInterval = 0
-
-    var isRunning: Bool {
-        startedAt != nil
-    }
-
-    func elapsedSeconds(now: Date) -> TimeInterval {
-        accumulatedSeconds + (startedAt.map { now.timeIntervalSince($0) } ?? 0)
-    }
-
-    mutating func toggle(now: Date) {
-        if let startedAt {
-            accumulatedSeconds += now.timeIntervalSince(startedAt)
-            self.startedAt = nil
-        } else {
-            startedAt = now
-        }
-    }
-
-    mutating func reset() {
-        accumulatedSeconds = 0
-        startedAt = nil
-    }
-
-    mutating func startFresh(now: Date = Date()) {
-        accumulatedSeconds = 0
-        startedAt = now
-    }
-}
-
-private struct RestTimerView: View {
-    let restartToken: UUID
-
-    @State private var timerState = RestTimerState()
-
-    var body: some View {
-        TimelineView(.periodic(from: Date(), by: 1)) { context in
-            HStack(spacing: 10) {
-                Label(displayText(now: context.date), systemImage: "timer")
-                    .font(.subheadline)
-                    .fontWeight(.semibold)
-                    .monospacedDigit()
-                    .frame(minWidth: 78, alignment: .leading)
-
-                Spacer()
-
-                Button {
-                    timerState.toggle(now: context.date)
-                } label: {
-                    Label(timerState.isRunning ? "Pause" : "Start Rest", systemImage: timerState.isRunning ? "pause.fill" : "play.fill")
-                        .labelStyle(.titleAndIcon)
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                }
-                .buttonStyle(.bordered)
-
-                Button {
-                    timerState.reset()
-                } label: {
-                    Image(systemName: "arrow.counterclockwise")
-                        .font(.caption)
-                        .fontWeight(.semibold)
-                }
-                .buttonStyle(.bordered)
-                .accessibilityLabel("Reset rest timer")
-            }
-            .padding(.vertical, 6)
-        }
-        .onChange(of: restartToken) { _, _ in
-            timerState.startFresh()
-        }
-    }
-
-    private func displayText(now: Date) -> String {
-        RestTimerFormatter.string(for: Int(timerState.elapsedSeconds(now: now).rounded(.down)))
     }
 }
 

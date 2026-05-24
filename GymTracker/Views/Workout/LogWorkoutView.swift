@@ -6,6 +6,22 @@ private struct PRCelebrationPayload: Identifiable {
     let activityNames: [String]
 }
 
+enum WorkoutEntryDrafts {
+    struct AddResult {
+        let entries: [LiveEntry]
+        let focusedEntryID: UUID
+    }
+
+    static func adding(activity: CDActivity, to entries: [LiveEntry]) -> [LiveEntry] {
+        addingFocused(activity: activity, to: entries).entries
+    }
+
+    static func addingFocused(activity: CDActivity, to entries: [LiveEntry]) -> AddResult {
+        let newEntry = LiveEntry(activity: activity)
+        return AddResult(entries: entries + [newEntry], focusedEntryID: newEntry.id)
+    }
+}
+
 struct LogWorkoutView: View {
     @Environment(\.managedObjectContext) private var context
     @Environment(\.dismiss) private var dismiss
@@ -33,6 +49,7 @@ struct LogWorkoutView: View {
     @State private var saveError: String? = nil
     @State private var completedDuringSession = false
     @State private var completedDurationMinutes: Int32? = nil
+    @State private var pendingFocusedEntryID: UUID? = nil
 
     var body: some View {
         if wrapsInNavigationStack {
@@ -60,7 +77,9 @@ struct LogWorkoutView: View {
         }
         .sheet(isPresented: $showingPicker) {
             ExercisePickerView { activity in
-                entries.insert(LiveEntry(activity: activity), at: 0)
+                let result = WorkoutEntryDrafts.addingFocused(activity: activity, to: entries)
+                entries = result.entries
+                pendingFocusedEntryID = result.focusedEntryID
             }
         }
         .fullScreenCover(item: $celebrationPayload) { payload in
@@ -101,31 +120,43 @@ struct LogWorkoutView: View {
     }
 
     private var editorContent: some View {
-        List {
-            Section {
-                WorkoutMetaSection(
-                    title: $title,
-                    workoutDate: $workoutDate,
-                    durationText: durationText,
-                    statusText: workoutStatusText
-                )
-                    .listRowInsets(EdgeInsets())
-                    .listRowSeparator(.hidden)
-                    .listRowBackground(Color.clear)
-            }
-            .listRowBackground(Color.clear)
+        ScrollViewReader { proxy in
+            List {
+                Section {
+                    WorkoutMetaSection(
+                        title: $title,
+                        workoutDate: $workoutDate,
+                        durationText: durationText,
+                        statusText: workoutStatusText
+                    )
+                        .listRowInsets(EdgeInsets())
+                        .listRowSeparator(.hidden)
+                        .listRowBackground(Color.clear)
+                }
+                .listRowBackground(Color.clear)
 
-            ForEach($entries) { $entry in
-                EntrySection(entry: $entry, onDeleteEntry: {
-                    entries.removeAll { $0.id == $entry.wrappedValue.id }
-                })
-            }
+                ForEach($entries) { $entry in
+                    EntrySection(entry: $entry, onDeleteEntry: {
+                        entries.removeAll { $0.id == $entry.wrappedValue.id }
+                    })
+                    .id($entry.wrappedValue.id)
+                }
 
-            if !entries.isEmpty {
-                WorkoutFinishingSection(notes: $notes, energyLevel: $energyLevel)
+                if !entries.isEmpty {
+                    WorkoutFinishingSection(notes: $notes, energyLevel: $energyLevel)
+                }
+            }
+            .listStyle(.insetGrouped)
+            .onChange(of: showingPicker) { _, isShowing in
+                guard !isShowing, let entryID = pendingFocusedEntryID else { return }
+                pendingFocusedEntryID = nil
+                DispatchQueue.main.async {
+                    withAnimation {
+                        proxy.scrollTo(entryID, anchor: .center)
+                    }
+                }
             }
         }
-        .listStyle(.insetGrouped)
     }
 
     private var bottomActions: some View {
