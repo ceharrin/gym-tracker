@@ -14,14 +14,22 @@ struct WorkoutStartDestination: Identifiable, Equatable {
 
 enum WorkoutStartCoordinator {
     static func startDestination(from workouts: [CDWorkout]) -> WorkoutStartDestination {
-        if let inProgress = workouts
-            .filter({ !$0.isCompleted })
-            .sorted(by: { $0.date > $1.date })
-            .first {
+        if let inProgress = inProgressWorkout(from: workouts) {
             return WorkoutStartDestination(mode: .resumeExisting, workout: inProgress)
         }
 
-        return WorkoutStartDestination(mode: .newWorkout, workout: nil)
+        return newWorkoutDestination()
+    }
+
+    static func newWorkoutDestination() -> WorkoutStartDestination {
+        WorkoutStartDestination(mode: .newWorkout, workout: nil)
+    }
+
+    static func inProgressWorkout(from workouts: [CDWorkout]) -> CDWorkout? {
+        workouts
+            .filter { !$0.isCompleted }
+            .sorted(by: { $0.date > $1.date })
+            .first
     }
 
     static func repeatDestination(from workouts: [CDWorkout]) -> WorkoutStartDestination? {

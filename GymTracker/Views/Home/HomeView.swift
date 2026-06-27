@@ -16,6 +16,9 @@ struct HomeView: View {
 
     private var profile: CDUserProfile? { profiles.first }
     private var recentWorkouts: [CDWorkout] { Array(workouts.prefix(3)) }
+    private var inProgressWorkout: CDWorkout? {
+        WorkoutStartCoordinator.inProgressWorkout(from: Array(workouts))
+    }
     private var repeatWorkoutDestination: WorkoutStartDestination? {
         WorkoutStartCoordinator.repeatDestination(from: Array(workouts))
     }
@@ -44,7 +47,12 @@ struct HomeView: View {
                     VStack(spacing: 20) {
                         headerSection
                         statsRow
-                        startWorkoutButton
+                        if let inProgressWorkout {
+                            resumeWorkoutButton(for: inProgressWorkout)
+                            startWorkoutButton(title: "Start New Workout", icon: "plus.circle")
+                        } else {
+                            startWorkoutButton(title: "Start Workout", icon: "plus.circle.fill")
+                        }
                         if repeatWorkoutDestination != nil {
                             repeatLastWorkoutButton
                         }
@@ -156,11 +164,11 @@ struct HomeView: View {
         return Units.displayWeight(kg: kg)
     }
 
-    private var startWorkoutButton: some View {
+    private func startWorkoutButton(title: String, icon: String) -> some View {
         Button {
-            startDestination = WorkoutStartCoordinator.startDestination(from: Array(workouts))
+            startDestination = WorkoutStartCoordinator.newWorkoutDestination()
         } label: {
-            Label("Start Workout", systemImage: "plus.circle.fill")
+            Label(title, systemImage: icon)
                 .font(.headline)
                 .frame(maxWidth: .infinity)
                 .padding()
@@ -169,6 +177,44 @@ struct HomeView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .shadow(color: GymTheme.electricBlue.opacity(0.30), radius: 16, x: 0, y: 10)
         }
+    }
+
+    private func resumeWorkoutButton(for workout: CDWorkout) -> some View {
+        Button {
+            startDestination = WorkoutStartDestination(mode: .resumeExisting, workout: workout)
+        } label: {
+            HStack(spacing: 12) {
+                Image(systemName: "play.circle.fill")
+                    .font(.title3)
+                    .foregroundStyle(.white)
+                    .frame(width: 38, height: 38)
+                    .background(GymTheme.electricBlue)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Resume Workout")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+                    Text(workout.title)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                    Text(workout.date, style: .date)
+                        .font(.caption)
+                        .foregroundStyle(.tertiary)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(16)
+            .gymCard(cornerRadius: 18)
+        }
+        .buttonStyle(.plain)
     }
 
     private var repeatLastWorkoutButton: some View {

@@ -81,6 +81,45 @@ final class WorkoutStartCoordinatorTests: XCTestCase {
         XCTAssertEqual(destination.workout?.objectID, newer.objectID)
     }
 
+    func test_inProgressWorkout_returnsMostRecentUncompletedWorkout() throws {
+        let older = makeWorkout(
+            title: "Older In Progress",
+            date: Date(timeIntervalSinceReferenceDate: 100),
+            isCompleted: false
+        )
+        let newer = makeWorkout(
+            title: "Newer In Progress",
+            date: Date(timeIntervalSinceReferenceDate: 300),
+            isCompleted: false
+        )
+        let completed = makeWorkout(
+            title: "Completed",
+            date: Date(timeIntervalSinceReferenceDate: 400),
+            isCompleted: true
+        )
+
+        let workout = try XCTUnwrap(WorkoutStartCoordinator.inProgressWorkout(from: [completed, older, newer]))
+
+        XCTAssertEqual(workout.objectID, newer.objectID)
+    }
+
+    func test_inProgressWorkout_returnsNilWhenAllWorkoutsAreCompleted() {
+        let completed = makeWorkout(
+            title: "Completed",
+            date: Date(timeIntervalSinceReferenceDate: 100),
+            isCompleted: true
+        )
+
+        XCTAssertNil(WorkoutStartCoordinator.inProgressWorkout(from: [completed]))
+    }
+
+    func test_newWorkoutDestination_createsNewWorkoutDestination() {
+        let destination = WorkoutStartCoordinator.newWorkoutDestination()
+
+        XCTAssertEqual(destination.mode, .newWorkout)
+        XCTAssertNil(destination.workout)
+    }
+
     func test_repeatDestination_returnsMostRecentCompletedWorkout() throws {
         let older = makeWorkout(
             title: "Older Completed",
