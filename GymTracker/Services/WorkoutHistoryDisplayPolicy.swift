@@ -31,7 +31,8 @@ struct WorkoutHistoryDisplayPolicy {
 
         return workouts.filter {
             $0.title.localizedCaseInsensitiveContains(normalizedSearch) ||
-            $0.activitySummary.localizedCaseInsensitiveContains(normalizedSearch)
+            $0.activitySummary.localizedCaseInsensitiveContains(normalizedSearch) ||
+            ($0.notes?.localizedCaseInsensitiveContains(normalizedSearch) ?? false)
         }
     }
 

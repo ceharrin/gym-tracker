@@ -171,7 +171,7 @@ struct WorkoutListView: View {
         ContentUnavailableView {
             Label("No Matching Workouts", systemImage: "magnifyingglass")
         } description: {
-            Text("Try a workout title or activity name.")
+            Text("Try a workout title, activity name, or note.")
         } actions: {
             Button("Clear Search") {
                 searchText = ""

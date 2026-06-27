@@ -11,7 +11,7 @@ final class WorkoutHistoryDisplayPolicyTests: XCTestCase {
         context = CoreDataTestHelper.makeContext()
     }
 
-    private func makeWorkout(title: String, summary: String = "", index: Int, date: Date? = nil) -> CDWorkout {
+    private func makeWorkout(title: String, summary: String = "", notes: String? = nil, index: Int, date: Date? = nil) -> CDWorkout {
         let workout = CDWorkout(context: context)
         workout.id = UUID()
         workout.title = title
@@ -20,7 +20,7 @@ final class WorkoutHistoryDisplayPolicyTests: XCTestCase {
         workout.isCompleted = true
         workout.durationMinutes = 30
         workout.energyLevel = 5
-        workout.notes = nil
+        workout.notes = notes
 
         if !summary.isEmpty {
             let activity = CDActivity(context: context)
@@ -69,6 +69,22 @@ final class WorkoutHistoryDisplayPolicyTests: XCTestCase {
         )
 
         XCTAssertEqual(visible.map(\.title), ["Monday Workout", "Tuesday Workout"])
+    }
+
+    func test_visibleWorkouts_withSearch_matchesWorkoutNotes() {
+        let workouts = [
+            makeWorkout(title: "Monday Workout", notes: "Felt strong on squats", index: 0),
+            makeWorkout(title: "Tuesday Workout", notes: "Easy recovery session", index: 1),
+            makeWorkout(title: "Wednesday Workout", notes: nil, index: 2)
+        ]
+
+        let visible = WorkoutHistoryDisplayPolicy.visibleWorkouts(
+            from: workouts,
+            searchText: "squats",
+            visibleCount: 1
+        )
+
+        XCTAssertEqual(visible.map(\.title), ["Monday Workout"])
     }
 
     func test_shouldShowLoadMore_onlyWhenNotSearchingAndMoreRemain() {
