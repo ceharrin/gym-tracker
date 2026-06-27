@@ -20,6 +20,10 @@ enum WorkoutEntryDrafts {
         let newEntry = LiveEntry(activity: activity)
         return AddResult(entries: entries + [newEntry], focusedEntryID: newEntry.id)
     }
+
+    static func latestEntryID(in entries: [LiveEntry]) -> UUID? {
+        entries.last?.id
+    }
 }
 
 struct LogWorkoutView: View {
@@ -147,14 +151,16 @@ struct LogWorkoutView: View {
                 }
             }
             .listStyle(.insetGrouped)
+            .onAppear {
+                focusPendingEntry(using: proxy)
+            }
+            .onChange(of: pendingFocusedEntryID) { _, _ in
+                guard !showingPicker else { return }
+                focusPendingEntry(using: proxy)
+            }
             .onChange(of: showingPicker) { _, isShowing in
-                guard !isShowing, let entryID = pendingFocusedEntryID else { return }
-                pendingFocusedEntryID = nil
-                DispatchQueue.main.async {
-                    withAnimation {
-                        proxy.scrollTo(entryID, anchor: .center)
-                    }
-                }
+                guard !isShowing else { return }
+                focusPendingEntry(using: proxy)
             }
         }
     }
@@ -271,6 +277,17 @@ struct LogWorkoutView: View {
         energyLevel = initialData.energyLevel
         notes = initialData.notes
         entries = initialData.entries
+        pendingFocusedEntryID = WorkoutEntryDrafts.latestEntryID(in: entries)
+    }
+
+    private func focusPendingEntry(using proxy: ScrollViewProxy) {
+        guard let entryID = pendingFocusedEntryID else { return }
+        pendingFocusedEntryID = nil
+        DispatchQueue.main.async {
+            withAnimation {
+                proxy.scrollTo(entryID, anchor: .center)
+            }
+        }
     }
 
     private var durationText: String {

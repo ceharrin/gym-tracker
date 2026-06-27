@@ -147,6 +147,19 @@ final class LiveEntryTests: XCTestCase {
         XCTAssertEqual(result.focusedEntryID, result.entries.last?.id)
     }
 
+    func test_latestEntryID_returnsBottomEntryForInitialFocus() {
+        let squat = makeActivity(name: "Squat")
+        let bench = makeActivity(name: "Bench")
+        let deadlift = makeActivity(name: "Deadlift")
+        let entries = [LiveEntry(activity: squat), LiveEntry(activity: bench), LiveEntry(activity: deadlift)]
+
+        XCTAssertEqual(WorkoutEntryDrafts.latestEntryID(in: entries), entries.last?.id)
+    }
+
+    func test_latestEntryID_isNilWhenNoEntriesExist() {
+        XCTAssertNil(WorkoutEntryDrafts.latestEntryID(in: []))
+    }
+
     // MARK: - LiveEntry default state
 
     func test_liveEntry_defaultsToOneLiveSet() {
