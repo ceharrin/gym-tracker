@@ -97,6 +97,39 @@ final class WorkoutHistoryDisplayPolicyTests: XCTestCase {
         )
     }
 
+    func test_contentState_emptyWhenNoWorkoutsExist() {
+        XCTAssertEqual(
+            WorkoutHistoryDisplayPolicy.contentState(
+                totalWorkoutCount: 0,
+                visibleWorkoutCount: 0,
+                searchText: ""
+            ),
+            .empty
+        )
+    }
+
+    func test_contentState_noSearchResultsWhenSearchingWithNoVisibleWorkouts() {
+        XCTAssertEqual(
+            WorkoutHistoryDisplayPolicy.contentState(
+                totalWorkoutCount: 4,
+                visibleWorkoutCount: 0,
+                searchText: "bench"
+            ),
+            .noSearchResults
+        )
+    }
+
+    func test_contentState_listWhenWorkoutsAreVisible() {
+        XCTAssertEqual(
+            WorkoutHistoryDisplayPolicy.contentState(
+                totalWorkoutCount: 4,
+                visibleWorkoutCount: 1,
+                searchText: "bench"
+            ),
+            .list
+        )
+    }
+
     func test_nextVisibleCount_capsAtTotalCount() {
         XCTAssertEqual(
             WorkoutHistoryDisplayPolicy.nextVisibleCount(currentVisibleCount: 100, totalCount: 250),

@@ -9,6 +9,12 @@ struct WorkoutHistoryMonthGroup: Identifiable {
 }
 
 struct WorkoutHistoryDisplayPolicy {
+    enum ContentState: Equatable {
+        case empty
+        case noSearchResults
+        case list
+    }
+
     static let initialVisibleCount = 100
     static let pageSize = 100
 
@@ -35,6 +41,22 @@ struct WorkoutHistoryDisplayPolicy {
         searchText: String
     ) -> Bool {
         searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && visibleCount < totalCount
+    }
+
+    static func contentState(
+        totalWorkoutCount: Int,
+        visibleWorkoutCount: Int,
+        searchText: String
+    ) -> ContentState {
+        if totalWorkoutCount == 0 {
+            return .empty
+        }
+
+        if visibleWorkoutCount == 0 && !searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            return .noSearchResults
+        }
+
+        return .list
     }
 
     static func nextVisibleCount(

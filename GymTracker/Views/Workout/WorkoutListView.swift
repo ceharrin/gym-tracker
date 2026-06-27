@@ -51,59 +51,27 @@ struct WorkoutListView: View {
         WorkoutHistoryDisplayPolicy.groupedByMonth(workouts: visibleWorkouts)
     }
 
+    private var contentState: WorkoutHistoryDisplayPolicy.ContentState {
+        WorkoutHistoryDisplayPolicy.contentState(
+            totalWorkoutCount: workouts.count,
+            visibleWorkoutCount: visibleWorkouts.count,
+            searchText: searchText
+        )
+    }
+
     var body: some View {
         NavigationStack(path: $navigationPath) {
             ZStack {
                 GymTheme.appBackground.ignoresSafeArea()
 
                 Group {
-                    if workouts.isEmpty {
+                    switch contentState {
+                    case .empty:
                         emptyState
-                    } else {
-                        List {
-                            ForEach(grouped) { group in
-                                Section {
-                                    ForEach(group.workouts) { workout in
-                                        Button {
-                                            navigationPath.append(WorkoutNavigationRoute(workout: workout))
-                                        } label: {
-                                            WorkoutSummaryRow(workout: workout, style: .list)
-                                        }
-                                        .buttonStyle(.plain)
-                                    }
-                                    .onDelete { delete(items: group.workouts, offsets: $0) }
-                                } header: {
-                                    Text(group.title)
-                                        .font(.caption)
-                                        .fontWeight(.bold)
-                                        .tracking(1.2)
-                                        .foregroundStyle(GymTheme.steel)
-                                }
-                            }
-
-                            if shouldShowLoadMore {
-                                Section {
-                                    Button {
-                                        visibleWorkoutCount = WorkoutHistoryDisplayPolicy.nextVisibleCount(
-                                            currentVisibleCount: visibleWorkoutCount,
-                                            totalCount: workouts.count
-                                        )
-                                    } label: {
-                                        HStack {
-                                            Spacer()
-                                            Text("Show Older Workouts (\(remainingWorkoutCount) more)")
-                                                .fontWeight(.semibold)
-                                            Spacer()
-                                        }
-                                    }
-                                    .foregroundStyle(GymTheme.electricBlue)
-                                }
-                            }
-                        }
-                        .scrollContentBackground(.hidden)
-                        .listStyle(.insetGrouped)
-                        .listRowSpacing(10)
-                        .searchable(text: $searchText, prompt: "Search workouts")
+                    case .noSearchResults:
+                        noSearchResultsState
+                    case .list:
+                        workoutList
                     }
                 }
             }
@@ -197,6 +165,68 @@ struct WorkoutListView: View {
                 .buttonStyle(.borderedProminent)
                 .tint(GymTheme.electricBlue)
         }
+    }
+
+    private var noSearchResultsState: some View {
+        ContentUnavailableView {
+            Label("No Matching Workouts", systemImage: "magnifyingglass")
+        } description: {
+            Text("Try a workout title or activity name.")
+        } actions: {
+            Button("Clear Search") {
+                searchText = ""
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(GymTheme.electricBlue)
+        }
+        .searchable(text: $searchText, prompt: "Search workouts")
+    }
+
+    private var workoutList: some View {
+        List {
+            ForEach(grouped) { group in
+                Section {
+                    ForEach(group.workouts) { workout in
+                        Button {
+                            navigationPath.append(WorkoutNavigationRoute(workout: workout))
+                        } label: {
+                            WorkoutSummaryRow(workout: workout, style: .list)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .onDelete { delete(items: group.workouts, offsets: $0) }
+                } header: {
+                    Text(group.title)
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .tracking(1.2)
+                        .foregroundStyle(GymTheme.steel)
+                }
+            }
+
+            if shouldShowLoadMore {
+                Section {
+                    Button {
+                        visibleWorkoutCount = WorkoutHistoryDisplayPolicy.nextVisibleCount(
+                            currentVisibleCount: visibleWorkoutCount,
+                            totalCount: workouts.count
+                        )
+                    } label: {
+                        HStack {
+                            Spacer()
+                            Text("Show Older Workouts (\(remainingWorkoutCount) more)")
+                                .fontWeight(.semibold)
+                            Spacer()
+                        }
+                    }
+                    .foregroundStyle(GymTheme.electricBlue)
+                }
+            }
+        }
+        .scrollContentBackground(.hidden)
+        .listStyle(.insetGrouped)
+        .listRowSpacing(10)
+        .searchable(text: $searchText, prompt: "Search workouts")
     }
 
     private var historyStatusBanner: some View {
