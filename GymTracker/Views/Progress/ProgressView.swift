@@ -18,6 +18,9 @@ struct ProgressTabView: View {
 
     private var profile: CDUserProfile? { profiles.first }
     private var cutoffDate: Date? { selectedRange.cutoffDate }
+    private var selectedActivityIDs: Set<NSManagedObjectID> {
+        Set(selectedActivities.map(\.objectID))
+    }
 
     init() {
         _activities = FetchRequest(fetchRequest: ManagedFetchRequests.activitiesByName(), animation: .default)
@@ -81,6 +84,18 @@ struct ProgressTabView: View {
                 if let url = exportURL {
                     ShareSheet(items: [url])
                 }
+            }
+            .onAppear {
+                reconcileSelections()
+            }
+            .onChange(of: selectedRange) {
+                reconcileSelections()
+            }
+            .onChange(of: activitiesWithData.map(\.objectID)) {
+                reconcileSelections()
+            }
+            .onChange(of: workoutMetricsWithData) {
+                reconcileSelections()
             }
         }
     }
@@ -218,6 +233,19 @@ struct ProgressTabView: View {
 
     private var activitiesWithData: [CDActivity] {
         activities.filter { ($0.entries?.count ?? 0) > 0 }
+    }
+
+    private func reconcileSelections() {
+        selectedWorkoutMetrics = ProgressSelectionPolicy.updatedMetricSelection(
+            current: selectedWorkoutMetrics,
+            available: workoutMetricsWithData
+        )
+
+        let updatedActivityIDs = ProgressSelectionPolicy.updatedActivitySelection(
+            currentIDs: selectedActivityIDs,
+            availableIDs: activitiesWithData.map(\.objectID)
+        )
+        selectedActivities = Set(activitiesWithData.filter { updatedActivityIDs.contains($0.objectID) })
     }
 
     // MARK: Workout Totals
