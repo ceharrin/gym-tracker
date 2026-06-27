@@ -82,6 +82,48 @@ final class PersistenceTests: XCTestCase {
 
         XCTAssertEqual(state.message, "Fallback message")
     }
+
+    func test_storeFileURLs_includesSQLiteSidecars() {
+        let url = URL(fileURLWithPath: "/tmp/GymTracker.sqlite")
+
+        let paths = PersistenceController.storeFileURLs(for: url).map(\.lastPathComponent)
+
+        XCTAssertEqual(paths, [
+            "GymTracker.sqlite",
+            "GymTracker.sqlite-shm",
+            "GymTracker.sqlite-wal"
+        ])
+    }
+
+    func test_quarantineStoreFiles_movesExistingStoreFiles() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PersistenceTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let storeURL = directory.appendingPathComponent("GymTracker.sqlite")
+        let walURL = directory.appendingPathComponent("GymTracker.sqlite-wal")
+        try Data("store".utf8).write(to: storeURL)
+        try Data("wal".utf8).write(to: walURL)
+
+        let quarantineDirectory = try XCTUnwrap(
+            PersistenceController.quarantineStoreFiles(at: storeURL, fileManager: .default)
+        )
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: storeURL.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: walURL.path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: quarantineDirectory.appendingPathComponent("GymTracker.sqlite").path))
+        XCTAssertTrue(FileManager.default.fileExists(atPath: quarantineDirectory.appendingPathComponent("GymTracker.sqlite-wal").path))
+    }
+
+    func test_quarantineStoreFiles_returnsNilWhenNoStoreFilesExist() throws {
+        let directory = FileManager.default.temporaryDirectory
+            .appendingPathComponent("PersistenceTests-\(UUID().uuidString)", isDirectory: true)
+        try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        let storeURL = directory.appendingPathComponent("GymTracker.sqlite")
+
+        let quarantineDirectory = try PersistenceController.quarantineStoreFiles(at: storeURL, fileManager: .default)
+
+        XCTAssertNil(quarantineDirectory)
+    }
 }
 
 private struct BlankDescriptionError: LocalizedError {

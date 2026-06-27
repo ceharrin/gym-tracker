@@ -4,16 +4,17 @@ import CoreData
 struct ActivityLibraryView: View {
     @Environment(\.managedObjectContext) private var context
     @Environment(\.dismiss) private var dismiss
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \CDActivity.name, ascending: true)],
-        animation: .default
-    ) private var activities: FetchedResults<CDActivity>
+    @FetchRequest private var activities: FetchedResults<CDActivity>
 
     @State private var searchText = ""
     @State private var selectedCategory: ActivityCategory? = nil
     @State private var showingAdd = false
     @State private var selectedActivityForTutorial: CDActivity? = nil
     @State private var persistenceAlert: PersistenceAlertState? = nil
+
+    init() {
+        _activities = FetchRequest(fetchRequest: ManagedFetchRequests.activitiesByName(), animation: .default)
+    }
 
     private var filtered: [CDActivity] {
         activities.filter { activity in

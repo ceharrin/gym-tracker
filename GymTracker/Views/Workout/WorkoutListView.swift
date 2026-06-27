@@ -3,10 +3,7 @@ import CoreData
 
 struct WorkoutListView: View {
     @Environment(\.managedObjectContext) private var context
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \CDWorkout.date, ascending: false)],
-        animation: .default
-    ) private var workouts: FetchedResults<CDWorkout>
+    @FetchRequest private var workouts: FetchedResults<CDWorkout>
 
     @State private var startDestination: WorkoutStartDestination? = nil
     @State private var showingPrintSummary = false
@@ -21,6 +18,10 @@ struct WorkoutListView: View {
     @State private var csvExportEndDate = Date()
     @State private var visibleWorkoutCount = WorkoutHistoryDisplayPolicy.initialVisibleCount
     @State private var navigationPath: [WorkoutNavigationRoute] = []
+
+    init() {
+        _workouts = FetchRequest(fetchRequest: ManagedFetchRequests.workoutsByDate(ascending: false), animation: .default)
+    }
 
     private var visibleWorkouts: [CDWorkout] {
         WorkoutHistoryDisplayPolicy.visibleWorkouts(

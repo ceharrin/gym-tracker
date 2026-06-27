@@ -26,7 +26,7 @@ struct PersistenceController {
     let container: NSPersistentContainer
 
     init(inMemory: Bool = false) {
-        container = NSPersistentContainer(
+        let initialContainer = NSPersistentContainer(
             name: "GymTracker",
             managedObjectModel: Self.managedObjectModel
         )
@@ -34,16 +34,12 @@ struct PersistenceController {
         if inMemory {
             let description = NSPersistentStoreDescription()
             description.type = NSInMemoryStoreType
-            container.persistentStoreDescriptions = [description]
-        } else if let description = container.persistentStoreDescriptions.first {
+            initialContainer.persistentStoreDescriptions = [description]
+        } else if let description = initialContainer.persistentStoreDescriptions.first {
             PersistenceController.configureProductionStore(description)
         }
 
-        container.loadPersistentStores { _, error in
-            if let error {
-                fatalError("Core Data store failed: \(error)")
-            }
-        }
+        container = Self.loadedContainer(from: initialContainer, inMemory: inMemory)
 
         container.viewContext.automaticallyMergesChangesFromParent = true
         container.viewContext.mergePolicy = NSMergeByPropertyObjectTrumpMergePolicy
@@ -63,7 +59,98 @@ struct PersistenceController {
         description.setOption(true as NSNumber, forKey: NSPersistentHistoryTrackingKey)
     }
 
+    static func storeFileURLs(for storeURL: URL) -> [URL] {
+        [
+            storeURL,
+            URL(fileURLWithPath: storeURL.path + "-shm"),
+            URL(fileURLWithPath: storeURL.path + "-wal")
+        ]
+    }
+
+    @discardableResult
+    static func quarantineStoreFiles(
+        at storeURL: URL,
+        fileManager: FileManager = .default
+    ) throws -> URL? {
+        let existingFiles = storeFileURLs(for: storeURL).filter { fileManager.fileExists(atPath: $0.path) }
+        guard !existingFiles.isEmpty else { return nil }
+
+        let formatter = DateFormatter()
+        formatter.calendar = Calendar(identifier: .gregorian)
+        formatter.locale = Locale(identifier: "en_US_POSIX")
+        formatter.dateFormat = "yyyyMMdd-HHmmss"
+        let quarantineDirectory = storeURL
+            .deletingLastPathComponent()
+            .appendingPathComponent("FailedStore-\(formatter.string(from: Date()))-\(UUID().uuidString.prefix(6))", isDirectory: true)
+
+        try fileManager.createDirectory(at: quarantineDirectory, withIntermediateDirectories: true)
+        for fileURL in existingFiles {
+            try fileManager.moveItem(
+                at: fileURL,
+                to: quarantineDirectory.appendingPathComponent(fileURL.lastPathComponent)
+            )
+        }
+
+        return quarantineDirectory
+    }
+
     var context: NSManagedObjectContext { container.viewContext }
+
+    private static func loadedContainer(
+        from initialContainer: NSPersistentContainer,
+        inMemory: Bool
+    ) -> NSPersistentContainer {
+        var loadError: Error?
+        initialContainer.loadPersistentStores { _, error in
+            loadError = error
+        }
+
+        guard let loadError else { return initialContainer }
+        guard !inMemory, recoverProductionStoreAfterLoadFailure(loadError, container: initialContainer) else {
+            fatalError("Core Data store failed: \(loadError)")
+        }
+
+        let recoveredContainer = NSPersistentContainer(
+            name: "GymTracker",
+            managedObjectModel: Self.managedObjectModel
+        )
+        if let description = recoveredContainer.persistentStoreDescriptions.first {
+            configureProductionStore(description)
+        }
+
+        var retryError: Error?
+        recoveredContainer.loadPersistentStores { _, error in
+            retryError = error
+        }
+
+        if let retryError {
+            fatalError("Core Data store failed after recovery: \(retryError)")
+        }
+
+        return recoveredContainer
+    }
+
+    private static func recoverProductionStoreAfterLoadFailure(
+        _ error: Error,
+        container: NSPersistentContainer
+    ) -> Bool {
+        guard let storeURL = container.persistentStoreDescriptions.first?.url else {
+            print("Core Data store failed without a store URL: \(error)")
+            return false
+        }
+
+        do {
+            guard let quarantineDirectory = try Self.quarantineStoreFiles(at: storeURL) else {
+                print("Core Data store failed with no store files to recover: \(error)")
+                return false
+            }
+            print("Core Data store failed and was moved to \(quarantineDirectory.path): \(error)")
+            return true
+        } catch {
+            print("Core Data store recovery failed: \(error)")
+            return false
+        }
+    }
 
     func save() {
         guard context.hasChanges else { return }

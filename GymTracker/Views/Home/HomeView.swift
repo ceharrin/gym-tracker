@@ -3,18 +3,16 @@ import CoreData
 
 struct HomeView: View {
     @Environment(\.managedObjectContext) private var context
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \CDWorkout.date, ascending: false)],
-        animation: .default
-    ) private var workouts: FetchedResults<CDWorkout>
-
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \CDUserProfile.createdAt, ascending: true)],
-        animation: .default
-    ) private var profiles: FetchedResults<CDUserProfile>
+    @FetchRequest private var workouts: FetchedResults<CDWorkout>
+    @FetchRequest private var profiles: FetchedResults<CDUserProfile>
 
     @State private var startDestination: WorkoutStartDestination? = nil
     @State private var navigationPath: [WorkoutNavigationRoute] = []
+
+    init() {
+        _workouts = FetchRequest(fetchRequest: ManagedFetchRequests.workoutsByDate(ascending: false), animation: .default)
+        _profiles = FetchRequest(fetchRequest: ManagedFetchRequests.profilesByCreatedAt(), animation: .default)
+    }
 
     private var profile: CDUserProfile? { profiles.first }
     private var recentWorkouts: [CDWorkout] { Array(workouts.prefix(3)) }

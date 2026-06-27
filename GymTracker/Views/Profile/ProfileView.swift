@@ -5,23 +5,10 @@ import UniformTypeIdentifiers
 
 struct ProfileView: View {
     @Environment(\.managedObjectContext) private var context
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \CDUserProfile.createdAt, ascending: true)],
-        animation: .default
-    ) private var profiles: FetchedResults<CDUserProfile>
-    @FetchRequest(
-        sortDescriptors: [],
-        animation: .default
-    ) private var workouts: FetchedResults<CDWorkout>
-    @FetchRequest(
-        sortDescriptors: [],
-        animation: .default
-    ) private var measurements: FetchedResults<CDBodyMeasurement>
-    @FetchRequest(
-        sortDescriptors: [],
-        predicate: NSPredicate(format: "isPreset == NO"),
-        animation: .default
-    ) private var customActivities: FetchedResults<CDActivity>
+    @FetchRequest private var profiles: FetchedResults<CDUserProfile>
+    @FetchRequest private var workouts: FetchedResults<CDWorkout>
+    @FetchRequest private var measurements: FetchedResults<CDBodyMeasurement>
+    @FetchRequest private var customActivities: FetchedResults<CDActivity>
 
     @State private var showingEdit = false
     @State private var showingActivityLibrary = false
@@ -34,6 +21,13 @@ struct ProfileView: View {
     @State private var backupStatusMessage: String? = nil
     @State private var pendingBackupImportURL: URL? = nil
     @State private var pendingBackupImportWarning: LocalBackupImportWarning? = nil
+
+    init() {
+        _profiles = FetchRequest(fetchRequest: ManagedFetchRequests.profilesByCreatedAt(), animation: .default)
+        _workouts = FetchRequest(fetchRequest: ManagedFetchRequests.workoutsByDate(ascending: false), animation: .default)
+        _measurements = FetchRequest(fetchRequest: ManagedFetchRequests.measurementsByDateDescending(), animation: .default)
+        _customActivities = FetchRequest(fetchRequest: ManagedFetchRequests.customActivitiesByName(), animation: .default)
+    }
 
     private var profile: CDUserProfile? { profiles.first }
     private var hasMeaningfulBackupData: Bool {

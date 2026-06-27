@@ -5,20 +5,9 @@ import CoreData
 struct ProgressTabView: View {
     @Environment(\.managedObjectContext) private var context
 
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \CDActivity.name, ascending: true)],
-        animation: .default
-    ) private var activities: FetchedResults<CDActivity>
-
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \CDUserProfile.createdAt, ascending: true)],
-        animation: .default
-    ) private var profiles: FetchedResults<CDUserProfile>
-
-    @FetchRequest(
-        sortDescriptors: [NSSortDescriptor(keyPath: \CDWorkout.date, ascending: true)],
-        animation: .default
-    ) private var workouts: FetchedResults<CDWorkout>
+    @FetchRequest private var activities: FetchedResults<CDActivity>
+    @FetchRequest private var profiles: FetchedResults<CDUserProfile>
+    @FetchRequest private var workouts: FetchedResults<CDWorkout>
 
     @State private var selectedActivities: Set<CDActivity> = []
     @State private var selectedWorkoutMetrics: Set<WorkoutTotalMetric> = []
@@ -29,6 +18,12 @@ struct ProgressTabView: View {
 
     private var profile: CDUserProfile? { profiles.first }
     private var cutoffDate: Date? { selectedRange.cutoffDate }
+
+    init() {
+        _activities = FetchRequest(fetchRequest: ManagedFetchRequests.activitiesByName(), animation: .default)
+        _profiles = FetchRequest(fetchRequest: ManagedFetchRequests.profilesByCreatedAt(), animation: .default)
+        _workouts = FetchRequest(fetchRequest: ManagedFetchRequests.workoutsByDate(ascending: true), animation: .default)
+    }
 
     var body: some View {
         NavigationStack {
