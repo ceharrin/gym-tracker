@@ -77,4 +77,40 @@ final class ProgressSelectionPolicyTests: XCTestCase {
 
         XCTAssertTrue(updated.isEmpty)
     }
+
+    func test_sectionState_returnsNoDataWhenNothingIsAvailable() {
+        let state = ProgressSelectionPolicy.sectionState(
+            availableItemCount: 0,
+            selectedItemCount: 0
+        )
+
+        XCTAssertEqual(state, .noData)
+    }
+
+    func test_sectionState_returnsNeedsSelectionWhenDataIsAvailableButNothingIsSelected() {
+        let state = ProgressSelectionPolicy.sectionState(
+            availableItemCount: 2,
+            selectedItemCount: 0
+        )
+
+        XCTAssertEqual(state, .needsSelection)
+    }
+
+    func test_sectionState_returnsReadyWhenDataIsAvailableAndSelected() {
+        let state = ProgressSelectionPolicy.sectionState(
+            availableItemCount: 2,
+            selectedItemCount: 1
+        )
+
+        XCTAssertEqual(state, .ready)
+    }
+
+    func test_sectionState_treatsNegativeCountsAsNoData() {
+        let state = ProgressSelectionPolicy.sectionState(
+            availableItemCount: -1,
+            selectedItemCount: -1
+        )
+
+        XCTAssertEqual(state, .noData)
+    }
 }

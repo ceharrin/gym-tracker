@@ -38,13 +38,23 @@ struct ProgressTabView: View {
                         rangeSelector
                         bodyWeightChart
                         workoutTotalsPicker
-                        ForEach(selectedWorkoutMetrics.sorted { $0.rawValue < $1.rawValue }) { metric in
-                            workoutTotalChart(for: metric)
+                        switch workoutTotalsSectionState {
+                        case .noData:
+                            workoutTotalsEmptyState
+                        case .needsSelection:
+                            workoutTotalsPlaceholder
+                        case .ready:
+                            ForEach(selectedWorkoutMetrics.sorted { $0.rawValue < $1.rawValue }) { metric in
+                                workoutTotalChart(for: metric)
+                            }
                         }
                         activityPicker
-                        if selectedActivities.isEmpty {
+                        switch activitySectionState {
+                        case .noData:
+                            activityEmptyState
+                        case .needsSelection:
                             activityPlaceholder
-                        } else {
+                        case .ready:
                             ForEach(selectedActivities.sorted { $0.name < $1.name }) { activity in
                                 activityChart(for: activity)
                             }
@@ -122,7 +132,7 @@ struct ProgressTabView: View {
                 .font(.headline)
 
             let measurements = filteredMeasurements
-            if measurements.isEmpty {
+            if bodyWeightSectionState == .noData {
                 // Render an empty Chart so the Charts framework is always initialised
                 // in the view hierarchy — required for ImageRenderer to work correctly
                 // when exporting progress before any activity chart has been shown.
@@ -131,7 +141,7 @@ struct ProgressTabView: View {
                     .chartXAxis(.hidden)
                     .chartYAxis(.hidden)
                     .overlay {
-                        emptyChartPlaceholder(message: "Log weight in your Profile to see trends here.")
+                        emptyChartPlaceholder(message: "Add a body-weight measurement in Profile to unlock this chart.")
                     }
             } else {
                 Chart {
@@ -169,6 +179,13 @@ struct ProgressTabView: View {
         let all = profile?.sortedMeasurements ?? []
         guard let cutoff = cutoffDate else { return all }
         return all.filter { $0.date >= cutoff }
+    }
+
+    private var bodyWeightSectionState: ProgressSelectionPolicy.SectionState {
+        ProgressSelectionPolicy.sectionState(
+            availableItemCount: filteredMeasurements.count,
+            selectedItemCount: filteredMeasurements.count
+        )
     }
 
     private func weightChangeSummary(delta: Double) -> some View {
@@ -233,6 +250,13 @@ struct ProgressTabView: View {
 
     private var activitiesWithData: [CDActivity] {
         activities.filter { ($0.entries?.count ?? 0) > 0 }
+    }
+
+    private var activitySectionState: ProgressSelectionPolicy.SectionState {
+        ProgressSelectionPolicy.sectionState(
+            availableItemCount: activitiesWithData.count,
+            selectedItemCount: selectedActivities.count
+        )
     }
 
     private func reconcileSelections() {
@@ -307,6 +331,13 @@ struct ProgressTabView: View {
         }
     }
 
+    private var workoutTotalsSectionState: ProgressSelectionPolicy.SectionState {
+        ProgressSelectionPolicy.sectionState(
+            availableItemCount: workoutMetricsWithData.count,
+            selectedItemCount: selectedWorkoutMetrics.count
+        )
+    }
+
     private func workoutTotalChart(for metric: WorkoutTotalMetric) -> some View {
         let dataPoints = Array(workouts).workoutTotalChartPoints(for: metric, cutoffDate: cutoffDate)
 
@@ -357,11 +388,46 @@ struct ProgressTabView: View {
     }
 
     private var activityPlaceholder: some View {
+        progressEmptyStateCard(
+            icon: "chart.line.uptrend.xyaxis",
+            title: "No activity selected",
+            message: "Select one or more activities above to see your progress chart."
+        )
+    }
+
+    private var activityEmptyState: some View {
+        progressEmptyStateCard(
+            icon: "chart.line.uptrend.xyaxis",
+            title: "No activity trends yet",
+            message: "Complete workouts with activity entries to unlock progress charts."
+        )
+    }
+
+    private var workoutTotalsPlaceholder: some View {
+        progressEmptyStateCard(
+            icon: "chart.bar.xaxis",
+            title: "No total selected",
+            message: "Select one or more totals above to compare workout volume."
+        )
+    }
+
+    private var workoutTotalsEmptyState: some View {
+        progressEmptyStateCard(
+            icon: "chart.bar.xaxis",
+            title: "No workout totals yet",
+            message: "Complete workouts in this range to unlock total duration, reps, distance, or laps."
+        )
+    }
+
+    private func progressEmptyStateCard(icon: String, title: String, message: String) -> some View {
         VStack(spacing: 8) {
-            Image(systemName: "chart.line.uptrend.xyaxis")
+            Image(systemName: icon)
                 .font(.largeTitle)
                 .foregroundStyle(.secondary)
-            Text("Select one or more activities above to see your progress chart.")
+            Text(title)
+                .font(.headline)
+                .foregroundStyle(GymTheme.ink)
+            Text(message)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)

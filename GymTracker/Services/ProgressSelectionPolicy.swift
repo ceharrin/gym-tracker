@@ -1,6 +1,12 @@
 import Foundation
 
 struct ProgressSelectionPolicy {
+    enum SectionState: Equatable {
+        case noData
+        case needsSelection
+        case ready
+    }
+
     static func updatedMetricSelection(
         current: Set<WorkoutTotalMetric>,
         available: [WorkoutTotalMetric]
@@ -27,5 +33,10 @@ struct ProgressSelectionPolicy {
         }
 
         return availableIDs.first.map { [$0] } ?? []
+    }
+
+    static func sectionState(availableItemCount: Int, selectedItemCount: Int) -> SectionState {
+        guard availableItemCount > 0 else { return .noData }
+        return selectedItemCount > 0 ? .ready : .needsSelection
     }
 }
