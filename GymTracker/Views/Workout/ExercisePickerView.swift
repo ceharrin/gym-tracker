@@ -19,13 +19,11 @@ struct ExercisePickerView: View {
     }
 
     private var filtered: [CDActivity] {
-        activities.filter { activity in
-            let matchesCategory = selectedCategory == nil || activity.category == selectedCategory?.rawValue
-            let matchesSearch = searchText.isEmpty ||
-                activity.name.localizedCaseInsensitiveContains(searchText) ||
-                (activity.muscleGroups?.localizedCaseInsensitiveContains(searchText) ?? false)
-            return matchesCategory && matchesSearch
-        }
+        ActivityFilterPolicy.filteredActivities(
+            from: Array(activities),
+            searchText: searchText,
+            selectedCategory: selectedCategory
+        )
     }
 
     private var grouped: [(ActivityCategory, [CDActivity])] {
@@ -37,31 +35,26 @@ struct ExercisePickerView: View {
         }
     }
 
+    private var contentState: ActivityFilterPolicy.ContentState {
+        ActivityFilterPolicy.contentState(
+            totalActivityCount: activities.count,
+            filteredActivityCount: filtered.count
+        )
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 categoryFilterBar
 
-                List {
-                    ForEach(grouped, id: \.0) { category, items in
-                        Section {
-                            ForEach(items) { activity in
-                                Button {
-                                    onSelect(activity)
-                                    dismiss()
-                                } label: {
-                                    ActivityPickerRow(activity: activity)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        } header: {
-                            Label(category.displayName, systemImage: category.icon)
-                                .foregroundStyle(category.color)
-                        }
-                    }
+                switch contentState {
+                case .empty:
+                    emptyState
+                case .noResults:
+                    noResultsState
+                case .list:
+                    activityList
                 }
-                .searchable(text: $searchText, prompt: "Search activities")
-                .listStyle(.insetGrouped)
             }
             .navigationTitle("Add Activity")
             .navigationBarTitleDisplayMode(.inline)
@@ -81,6 +74,59 @@ struct ExercisePickerView: View {
                 AddActivityView()
             }
         }
+    }
+
+    private var emptyState: some View {
+        ContentUnavailableView {
+            Label("No Activities Yet", systemImage: "dumbbell")
+        } description: {
+            Text("Add an activity to start building workouts.")
+        } actions: {
+            Button("Add Activity") {
+                showingAddActivity = true
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(GymTheme.electricBlue)
+        }
+    }
+
+    private var noResultsState: some View {
+        ContentUnavailableView {
+            Label("No Matching Activities", systemImage: "magnifyingglass")
+        } description: {
+            Text("Try another search or category.")
+        } actions: {
+            Button("Clear Filters") {
+                searchText = ""
+                selectedCategory = nil
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(GymTheme.electricBlue)
+        }
+        .searchable(text: $searchText, prompt: "Search activities")
+    }
+
+    private var activityList: some View {
+        List {
+            ForEach(grouped, id: \.0) { category, items in
+                Section {
+                    ForEach(items) { activity in
+                        Button {
+                            onSelect(activity)
+                            dismiss()
+                        } label: {
+                            ActivityPickerRow(activity: activity)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                } header: {
+                    Label(category.displayName, systemImage: category.icon)
+                        .foregroundStyle(category.color)
+                }
+            }
+        }
+        .searchable(text: $searchText, prompt: "Search activities")
+        .listStyle(.insetGrouped)
     }
 
     private var categoryFilterBar: some View {

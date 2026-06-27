@@ -17,13 +17,11 @@ struct ActivityLibraryView: View {
     }
 
     private var filtered: [CDActivity] {
-        activities.filter { activity in
-            let matchesCat = selectedCategory == nil || activity.category == selectedCategory?.rawValue
-            let matchesSearch = searchText.isEmpty ||
-                activity.name.localizedCaseInsensitiveContains(searchText) ||
-                (activity.muscleGroups?.localizedCaseInsensitiveContains(searchText) ?? false)
-            return matchesCat && matchesSearch
-        }
+        ActivityFilterPolicy.filteredActivities(
+            from: Array(activities),
+            searchText: searchText,
+            selectedCategory: selectedCategory
+        )
     }
 
     private var grouped: [(ActivityCategory, [CDActivity])] {
@@ -35,27 +33,26 @@ struct ActivityLibraryView: View {
         }
     }
 
+    private var contentState: ActivityFilterPolicy.ContentState {
+        ActivityFilterPolicy.contentState(
+            totalActivityCount: activities.count,
+            filteredActivityCount: filtered.count
+        )
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 categoryFilterBar
 
-                List {
-                    ForEach(grouped, id: \.0) { category, items in
-                        Section {
-                            if category == .strength {
-                                strengthSectionContent(items: items)
-                            } else {
-                                activityRows(items: items)
-                            }
-                        } header: {
-                            Label(category.displayName, systemImage: category.icon)
-                                .foregroundStyle(category.color)
-                        }
-                    }
+                switch contentState {
+                case .empty:
+                    emptyState
+                case .noResults:
+                    noResultsState
+                case .list:
+                    activityList
                 }
-                .searchable(text: $searchText, prompt: "Search library")
-                .listStyle(.insetGrouped)
             }
             .navigationTitle("Activity Library")
             .navigationBarTitleDisplayMode(.inline)
@@ -79,6 +76,55 @@ struct ActivityLibraryView: View {
             }
             .persistenceErrorAlert($persistenceAlert)
         }
+    }
+
+    private var emptyState: some View {
+        ContentUnavailableView {
+            Label("No Activities Yet", systemImage: "dumbbell")
+        } description: {
+            Text("Add an activity to start building your library.")
+        } actions: {
+            Button("Add Activity") {
+                showingAdd = true
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(GymTheme.electricBlue)
+        }
+    }
+
+    private var noResultsState: some View {
+        ContentUnavailableView {
+            Label("No Matching Activities", systemImage: "magnifyingglass")
+        } description: {
+            Text("Try another search or category.")
+        } actions: {
+            Button("Clear Filters") {
+                searchText = ""
+                selectedCategory = nil
+            }
+            .buttonStyle(.borderedProminent)
+            .tint(GymTheme.electricBlue)
+        }
+        .searchable(text: $searchText, prompt: "Search library")
+    }
+
+    private var activityList: some View {
+        List {
+            ForEach(grouped, id: \.0) { category, items in
+                Section {
+                    if category == .strength {
+                        strengthSectionContent(items: items)
+                    } else {
+                        activityRows(items: items)
+                    }
+                } header: {
+                    Label(category.displayName, systemImage: category.icon)
+                        .foregroundStyle(category.color)
+                }
+            }
+        }
+        .searchable(text: $searchText, prompt: "Search library")
+        .listStyle(.insetGrouped)
     }
 
     private var categoryFilterBar: some View {
