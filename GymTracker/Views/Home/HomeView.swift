@@ -18,6 +18,9 @@ struct HomeView: View {
 
     private var profile: CDUserProfile? { profiles.first }
     private var recentWorkouts: [CDWorkout] { Array(workouts.prefix(3)) }
+    private var repeatWorkoutDestination: WorkoutStartDestination? {
+        WorkoutStartCoordinator.repeatDestination(from: Array(workouts))
+    }
 
     private var greeting: String {
         let name = profile?.name.isEmpty == false ? profile!.name : "Coach"
@@ -44,6 +47,9 @@ struct HomeView: View {
                         headerSection
                         statsRow
                         startWorkoutButton
+                        if repeatWorkoutDestination != nil {
+                            repeatLastWorkoutButton
+                        }
                         if !recentWorkouts.isEmpty {
                             recentSection
                         }
@@ -57,10 +63,17 @@ struct HomeView: View {
             .toolbarBackground(Color.white.opacity(0.92), for: .navigationBar)
             .toolbarBackground(.visible, for: .navigationBar)
             .sheet(item: $startDestination) { destination in
-                if let workout = destination.workout {
-                    LogWorkoutView(workout: workout)
-                } else {
+                switch destination.mode {
+                case .newWorkout:
                     LogWorkoutView()
+                case .resumeExisting:
+                    if let workout = destination.workout {
+                        LogWorkoutView(workout: workout)
+                    }
+                case .repeatCompleted:
+                    if let workout = destination.workout {
+                        LogWorkoutView(workout: workout, isDuplicate: true)
+                    }
                 }
             }
             .navigationDestination(for: WorkoutNavigationRoute.self) { route in
@@ -158,6 +171,43 @@ struct HomeView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
                 .shadow(color: GymTheme.electricBlue.opacity(0.30), radius: 16, x: 0, y: 10)
         }
+    }
+
+    private var repeatLastWorkoutButton: some View {
+        Button {
+            startDestination = repeatWorkoutDestination
+        } label: {
+            HStack(spacing: 10) {
+                Image(systemName: "arrow.clockwise.circle.fill")
+                    .font(.headline)
+                    .foregroundStyle(GymTheme.electricBlue)
+                    .frame(width: 32, height: 32)
+                    .background(GymTheme.electricBlue.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Repeat Last Workout")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    if let title = repeatWorkoutDestination?.workout?.title {
+                        Text(title)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .foregroundStyle(.tertiary)
+            }
+            .padding(14)
+            .gymCard(cornerRadius: 18)
+        }
+        .buttonStyle(.plain)
     }
 
     private var recentSection: some View {

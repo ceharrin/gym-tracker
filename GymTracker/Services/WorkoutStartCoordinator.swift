@@ -4,6 +4,7 @@ struct WorkoutStartDestination: Identifiable, Equatable {
     enum Mode: Equatable {
         case newWorkout
         case resumeExisting
+        case repeatCompleted
     }
 
     let id = UUID()
@@ -21,5 +22,13 @@ enum WorkoutStartCoordinator {
         }
 
         return WorkoutStartDestination(mode: .newWorkout, workout: nil)
+    }
+
+    static func repeatDestination(from workouts: [CDWorkout]) -> WorkoutStartDestination? {
+        workouts
+            .filter(\.isCompleted)
+            .sorted(by: { $0.date > $1.date })
+            .first
+            .map { WorkoutStartDestination(mode: .repeatCompleted, workout: $0) }
     }
 }
