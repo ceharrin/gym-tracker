@@ -7,6 +7,8 @@ struct ActivityFilterPolicy {
         case list
     }
 
+    static let noResultsDescription = "Try a name, muscle group, instruction, or category."
+
     static func filteredActivities(
         from activities: [CDActivity],
         searchText: String,

@@ -94,7 +94,7 @@ struct ExercisePickerView: View {
         ContentUnavailableView {
             Label("No Matching Activities", systemImage: "magnifyingglass")
         } description: {
-            Text("Try another search or category.")
+            Text(ActivityFilterPolicy.noResultsDescription)
         } actions: {
             Button("Clear Filters") {
                 searchText = ""

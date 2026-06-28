@@ -96,7 +96,7 @@ struct ActivityLibraryView: View {
         ContentUnavailableView {
             Label("No Matching Activities", systemImage: "magnifyingglass")
         } description: {
-            Text("Try a name, muscle group, instruction, or category.")
+            Text(ActivityFilterPolicy.noResultsDescription)
         } actions: {
             Button("Clear Filters") {
                 searchText = ""

@@ -120,4 +120,11 @@ final class ActivityFilterPolicyTests: XCTestCase {
             .list
         )
     }
+
+    func test_noResultsDescription_includesAllSearchableFields() {
+        XCTAssertEqual(
+            ActivityFilterPolicy.noResultsDescription,
+            "Try a name, muscle group, instruction, or category."
+        )
+    }
 }
