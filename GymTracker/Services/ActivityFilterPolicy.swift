@@ -18,7 +18,8 @@ struct ActivityFilterPolicy {
             let matchesCategory = selectedCategory == nil || activity.category == selectedCategory?.rawValue
             let matchesSearch = normalizedSearch.isEmpty ||
                 activity.name.localizedCaseInsensitiveContains(normalizedSearch) ||
-                (activity.muscleGroups?.localizedCaseInsensitiveContains(normalizedSearch) ?? false)
+                (activity.muscleGroups?.localizedCaseInsensitiveContains(normalizedSearch) ?? false) ||
+                (activity.instructions?.localizedCaseInsensitiveContains(normalizedSearch) ?? false)
             return matchesCategory && matchesSearch
         }
     }

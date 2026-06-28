@@ -13,7 +13,8 @@ final class ActivityFilterPolicyTests: XCTestCase {
     private func makeActivity(
         name: String,
         category: ActivityCategory,
-        muscleGroups: String? = nil
+        muscleGroups: String? = nil,
+        instructions: String? = nil
     ) -> CDActivity {
         let activity = CDActivity(context: context)
         activity.id = UUID()
@@ -22,6 +23,7 @@ final class ActivityFilterPolicyTests: XCTestCase {
         activity.icon = category.icon
         activity.primaryMetric = category.defaultMetric.rawValue
         activity.muscleGroups = muscleGroups
+        activity.instructions = instructions
         activity.isPreset = true
         return activity
     }
@@ -50,6 +52,27 @@ final class ActivityFilterPolicyTests: XCTestCase {
         )
 
         XCTAssertEqual(filtered.map(\.name), ["Cable Row"])
+    }
+
+    func test_filteredActivities_matchesInstructionsSearch() {
+        let deadlift = makeActivity(
+            name: "Deadlift",
+            category: .strength,
+            instructions: "Keep the bar close and brace hard."
+        )
+        let run = makeActivity(
+            name: "Treadmill Run",
+            category: .cardio,
+            instructions: "Stay relaxed."
+        )
+
+        let filtered = ActivityFilterPolicy.filteredActivities(
+            from: [deadlift, run],
+            searchText: "brace",
+            selectedCategory: nil
+        )
+
+        XCTAssertEqual(filtered.map(\.name), ["Deadlift"])
     }
 
     func test_filteredActivities_appliesSelectedCategory() {
