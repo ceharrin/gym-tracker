@@ -1,5 +1,20 @@
 import SwiftUI
 
+struct WorkoutDetailMetadataPresentation {
+    let date: Date
+    let statusLabel: String?
+    let durationText: String
+    let filledEnergyBoltCount: Int
+    let totalEnergyBoltCount = 5
+
+    init(workout: CDWorkout) {
+        date = workout.date
+        statusLabel = workout.statusLabel
+        durationText = workout.formattedDuration ?? "—"
+        filledEnergyBoltCount = Int(workout.energyLevel) / 2
+    }
+}
+
 struct WorkoutDetailView: View {
     @Environment(\.managedObjectContext) private var context
     @Environment(\.dismiss) private var dismiss
@@ -118,29 +133,7 @@ struct WorkoutDetailView: View {
     }
 
     private var metaCard: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            if let statusLabel = workout.statusLabel {
-                Text(statusLabel)
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color.accentColor.opacity(0.12))
-                    .foregroundStyle(Color.accentColor)
-                    .clipShape(Capsule())
-            }
-            HStack(spacing: 0) {
-                metaStat(label: "Date", value: workout.date, style: .date)
-                Divider().frame(height: 40)
-                metaDurationStat
-                Divider().frame(height: 40)
-                metaEnergyStat
-            }
-        }
-        .frame(maxWidth: .infinity)
-        .padding(16)
-        .background(Color(.secondarySystemBackground))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        WorkoutDetailMetadataCard(presentation: WorkoutDetailMetadataPresentation(workout: workout))
     }
 
     @ViewBuilder
@@ -185,46 +178,6 @@ struct WorkoutDetailView: View {
         }
     }
 
-    private func metaStat(label: String, value: Date, style: Text.DateStyle) -> some View {
-        VStack(spacing: 4) {
-            Text(value, style: style)
-                .font(.subheadline)
-                .fontWeight(.semibold)
-            Text(label)
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private var metaDurationStat: some View {
-        VStack(spacing: 4) {
-            Text(workout.formattedDuration ?? "—")
-                .font(.subheadline)
-                .fontWeight(.semibold)
-            Text("Duration")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
-    private var metaEnergyStat: some View {
-        VStack(spacing: 4) {
-            HStack(spacing: 2) {
-                ForEach(0..<5) { i in
-                    Image(systemName: i < workout.energyLevel / 2 ? "bolt.fill" : "bolt")
-                        .font(.caption)
-                        .foregroundStyle(.orange)
-                }
-            }
-            Text("Energy")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-        }
-        .frame(maxWidth: .infinity)
-    }
-
     private func notesCard(_ notes: String) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Label("Notes", systemImage: "note.text")
@@ -238,6 +191,79 @@ struct WorkoutDetailView: View {
         .padding(16)
         .background(Color(.secondarySystemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+}
+
+// MARK: - Metadata
+
+private struct WorkoutDetailMetadataCard: View {
+    let presentation: WorkoutDetailMetadataPresentation
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            if let statusLabel = presentation.statusLabel {
+                Text(statusLabel)
+                    .font(.caption)
+                    .fontWeight(.semibold)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(Color.accentColor.opacity(0.12))
+                    .foregroundStyle(Color.accentColor)
+                    .clipShape(Capsule())
+            }
+
+            HStack(spacing: 0) {
+                metaDateStat
+                Divider().frame(height: 40)
+                metaTextStat(label: "Duration", value: presentation.durationText)
+                Divider().frame(height: 40)
+                metaEnergyStat
+            }
+        }
+        .frame(maxWidth: .infinity)
+        .padding(16)
+        .background(Color(.secondarySystemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private var metaDateStat: some View {
+        VStack(spacing: 4) {
+            Text(presentation.date, style: .date)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+            Text("Date")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private func metaTextStat(label: String, value: String) -> some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.subheadline)
+                .fontWeight(.semibold)
+            Text(label)
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+    }
+
+    private var metaEnergyStat: some View {
+        VStack(spacing: 4) {
+            HStack(spacing: 2) {
+                ForEach(0..<presentation.totalEnergyBoltCount, id: \.self) { index in
+                    Image(systemName: index < presentation.filledEnergyBoltCount ? "bolt.fill" : "bolt")
+                        .font(.caption)
+                        .foregroundStyle(.orange)
+                }
+            }
+            Text("Energy")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity)
     }
 }
 

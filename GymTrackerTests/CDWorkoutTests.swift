@@ -326,6 +326,30 @@ final class CDWorkoutTests: XCTestCase {
         XCTAssertNil(w.statusLabel)
     }
 
+    // MARK: - Workout detail metadata presentation
+
+    func test_workoutDetailMetadataPresentation_usesWorkoutValues() {
+        let workout = makeWorkout(durationMinutes: 45)
+        workout.isCompleted = false
+        workout.energyLevel = 7
+
+        let presentation = WorkoutDetailMetadataPresentation(workout: workout)
+
+        XCTAssertEqual(presentation.statusLabel, "In Progress")
+        XCTAssertEqual(presentation.durationText, "45 min")
+        XCTAssertEqual(presentation.filledEnergyBoltCount, 3)
+        XCTAssertEqual(presentation.totalEnergyBoltCount, 5)
+    }
+
+    func test_workoutDetailMetadataPresentation_usesDurationFallbackWhenMissing() {
+        let workout = makeWorkout(durationMinutes: 0)
+        workout.isCompleted = false
+
+        let presentation = WorkoutDetailMetadataPresentation(workout: workout)
+
+        XCTAssertEqual(presentation.durationText, "—")
+    }
+
     func test_canRenderInUI_trueForActiveWorkout() {
         let w = makeWorkout()
 
