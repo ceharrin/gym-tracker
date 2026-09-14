@@ -35,6 +35,7 @@ struct LocalBackupImportWarning: Equatable {
 
 enum LocalBackupExporter {
     static let exportDirectoryName = "LocalBackups"
+    static let iCloudBackupDirectoryName = "GymTracker Backups"
 
     struct BackupSnapshot: Codable {
         let app: String
@@ -112,6 +113,7 @@ enum LocalBackupExporter {
 
     enum ExportError: LocalizedError {
         case noMeaningfulData
+        case iCloudUnavailable
         case directoryCreationFailure(Error)
         case writeFailure(Error)
 
@@ -119,6 +121,8 @@ enum LocalBackupExporter {
             switch self {
             case .noMeaningfulData:
                 return "There isn't any workout, measurement, custom activity, or filled-in profile data to back up yet."
+            case .iCloudUnavailable:
+                return "iCloud Drive isn't available. Sign in to iCloud and enable iCloud Drive for GymTracker, then try again."
             case .directoryCreationFailure(let error):
                 return "Could not prepare the backup folder: \(error.localizedDescription)"
             case .writeFailure(let error):
@@ -175,6 +179,16 @@ enum LocalBackupExporter {
         } catch {
             throw ExportError.writeFailure(error)
         }
+    }
+
+    @MainActor
+    static func exportBackupToICloud(
+        from context: NSManagedObjectContext,
+        fileManager: FileManager = .default,
+        ubiquityContainer: () -> URL? = { FileManager.default.url(forUbiquityContainerIdentifier: nil) }
+    ) throws -> URL {
+        let directory = try iCloudBackupDirectory(fileManager: fileManager, ubiquityContainer: ubiquityContainer)
+        return try exportBackup(from: context, directory: directory)
     }
 
     @MainActor
@@ -364,6 +378,24 @@ enum LocalBackupExporter {
             let exports = base.appendingPathComponent(exportDirectoryName, isDirectory: true)
             try fileManager.createDirectory(at: exports, withIntermediateDirectories: true)
             return exports
+        } catch {
+            throw ExportError.directoryCreationFailure(error)
+        }
+    }
+
+    static func iCloudBackupDirectory(
+        fileManager: FileManager = .default,
+        ubiquityContainer: () -> URL? = { FileManager.default.url(forUbiquityContainerIdentifier: nil) }
+    ) throws -> URL {
+        guard let container = ubiquityContainer() else {
+            throw ExportError.iCloudUnavailable
+        }
+
+        do {
+            let documents = container.appendingPathComponent("Documents", isDirectory: true)
+            let backups = documents.appendingPathComponent(iCloudBackupDirectoryName, isDirectory: true)
+            try fileManager.createDirectory(at: backups, withIntermediateDirectories: true)
+            return backups
         } catch {
             throw ExportError.directoryCreationFailure(error)
         }

@@ -16,6 +16,7 @@ struct ProfileView: View {
     @State private var showingBackupShare = false
     @State private var backupError: String? = nil
     @State private var isExportingBackup = false
+    @State private var isSavingICloudBackup = false
     @State private var showingBackupImporter = false
     @State private var isImportingBackup = false
     @State private var backupStatusMessage: String? = nil
@@ -139,7 +140,7 @@ struct ProfileView: View {
             Label("Local Data & Backup", systemImage: "externaldrive.badge.checkmark")
                 .font(.headline)
 
-            Text("GymTracker stores your data on this device for version 1. If you delete the app, your workouts, profile, measurements, and custom activities will be removed from this device.")
+            Text("GymTracker stores your data on this device. Save a backup before deleting the app or moving to a new phone; iCloud backups are files in iCloud Drive, not automatic device sync.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
@@ -161,7 +162,27 @@ struct ProfileView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
             .buttonStyle(.plain)
-            .disabled(isExportingBackup || isImportingBackup || !hasMeaningfulBackupData)
+            .disabled(isBackupBusy || !hasMeaningfulBackupData)
+
+            Button {
+                saveBackupToICloud()
+            } label: {
+                HStack {
+                    if isSavingICloudBackup {
+                        SwiftUI.ProgressView()
+                            .controlSize(.small)
+                    } else {
+                        Image(systemName: "icloud.and.arrow.up")
+                    }
+                    Text(isSavingICloudBackup ? "Saving to iCloud..." : "Save Backup to iCloud")
+                    Spacer()
+                }
+                .padding(14)
+                .background(GymTheme.electricBlue.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
+            }
+            .buttonStyle(.plain)
+            .disabled(isBackupBusy || !hasMeaningfulBackupData)
 
             Button {
                 showingBackupImporter = true
@@ -181,16 +202,20 @@ struct ProfileView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             }
             .buttonStyle(.plain)
-            .disabled(isExportingBackup || isImportingBackup)
+            .disabled(isBackupBusy)
 
             Text(hasMeaningfulBackupData
-                 ? "Export a backup before deleting the app or moving to a new phone. Importing a backup replaces the current local data on this device."
+                 ? "Importing a backup replaces the current local data on this device."
                  : "Add a workout, measurement, custom activity, or profile details before exporting your first backup.")
                 .font(.caption)
                 .foregroundStyle(GymTheme.steel)
         }
         .padding(16)
         .gymCard()
+    }
+
+    private var isBackupBusy: Bool {
+        isExportingBackup || isSavingICloudBackup || isImportingBackup
     }
 
     private func exportBackup() {
@@ -201,6 +226,20 @@ struct ProfileView: View {
             do {
                 backupShareURL = try LocalBackupExporter.exportBackup(from: context)
                 showingBackupShare = true
+            } catch {
+                backupError = error.localizedDescription
+            }
+        }
+    }
+
+    private func saveBackupToICloud() {
+        guard !isSavingICloudBackup else { return }
+        isSavingICloudBackup = true
+        Task { @MainActor in
+            defer { isSavingICloudBackup = false }
+            do {
+                let url = try LocalBackupExporter.exportBackupToICloud(from: context)
+                backupStatusMessage = "Your backup was saved to iCloud Drive in \(url.deletingLastPathComponent().lastPathComponent)."
             } catch {
                 backupError = error.localizedDescription
             }

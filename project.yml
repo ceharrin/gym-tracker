@@ -34,6 +34,7 @@ targets:
         CURRENT_PROJECT_VERSION: 1
         SWIFT_VERSION: "5.9"
         INFOPLIST_FILE: GymTracker/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: GymTracker/GymTracker.entitlements
         CODE_SIGN_STYLE: Automatic
         DEVELOPMENT_TEAM: "Christopher Harrington"
         TARGETED_DEVICE_FAMILY: "1"

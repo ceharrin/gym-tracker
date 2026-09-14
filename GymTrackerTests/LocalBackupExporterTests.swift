@@ -95,6 +95,57 @@ final class LocalBackupExporterTests: XCTestCase {
         XCTAssertEqual(json?["profiles"] as? [[String: Any]] != nil, true)
     }
 
+    func test_iCloudBackupDirectory_usesDocumentsBackupsFolder() throws {
+        let container = FileManager.default
+            .temporaryDirectory
+            .appendingPathComponent("iCloudContainer-\(UUID().uuidString)", isDirectory: true)
+
+        let directory = try LocalBackupExporter.iCloudBackupDirectory(
+            fileManager: .default,
+            ubiquityContainer: { container }
+        )
+
+        XCTAssertEqual(directory.lastPathComponent, "GymTracker Backups")
+        XCTAssertEqual(directory.deletingLastPathComponent().lastPathComponent, "Documents")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: directory.path))
+    }
+
+    @MainActor
+    func test_exportBackupToICloud_writesBackupIntoICloudDocumentsFolder() throws {
+        let profile = CDUserProfile(context: context)
+        profile.name = "iCloud Backup Tester"
+        profile.createdAt = Date()
+        profile.heightCm = 180
+        try context.saveIfChanged()
+
+        let container = FileManager.default
+            .temporaryDirectory
+            .appendingPathComponent("iCloudContainer-\(UUID().uuidString)", isDirectory: true)
+
+        let url = try LocalBackupExporter.exportBackupToICloud(
+            from: context,
+            ubiquityContainer: { container }
+        )
+
+        XCTAssertEqual(url.pathExtension, "json")
+        XCTAssertEqual(url.deletingLastPathComponent().lastPathComponent, "GymTracker Backups")
+        XCTAssertEqual(url.deletingLastPathComponent().deletingLastPathComponent().lastPathComponent, "Documents")
+        XCTAssertTrue(FileManager.default.fileExists(atPath: url.path))
+    }
+
+    func test_iCloudBackupDirectory_throwsWhenContainerUnavailable() {
+        XCTAssertThrowsError(
+            try LocalBackupExporter.iCloudBackupDirectory(
+                fileManager: .default,
+                ubiquityContainer: { nil }
+            )
+        ) { error in
+            guard case LocalBackupExporter.ExportError.iCloudUnavailable = error else {
+                return XCTFail("Expected iCloudUnavailable, got \(error)")
+            }
+        }
+    }
+
     @MainActor
     func test_hasMeaningfulData_falseForPlaceholderProfileAndPresetActivitiesOnly() throws {
         let profile = CDUserProfile(context: context)
