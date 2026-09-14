@@ -113,4 +113,52 @@ final class ProgressSelectionPolicyTests: XCTestCase {
 
         XCTAssertEqual(state, .noData)
     }
+
+    func test_activityMatchesFilters_returnsTrueWhenSearchAndCategoryAreEmpty() {
+        XCTAssertTrue(ProgressSelectionPolicy.activityMatchesFilters(
+            name: "Bench Press",
+            category: .strength,
+            searchText: "",
+            selectedCategory: nil
+        ))
+    }
+
+    func test_activityMatchesFilters_ignoresCaseAndWhitespaceSearch() {
+        XCTAssertTrue(ProgressSelectionPolicy.activityMatchesFilters(
+            name: "Bulgarian Split Squat",
+            category: .strength,
+            searchText: "  split  ",
+            selectedCategory: nil
+        ))
+    }
+
+    func test_activityMatchesFilters_filtersByCategory() {
+        XCTAssertTrue(ProgressSelectionPolicy.activityMatchesFilters(
+            name: "Lap Swim",
+            category: .swimming,
+            searchText: "",
+            selectedCategory: .swimming
+        ))
+        XCTAssertFalse(ProgressSelectionPolicy.activityMatchesFilters(
+            name: "Lap Swim",
+            category: .swimming,
+            searchText: "",
+            selectedCategory: .strength
+        ))
+    }
+
+    func test_activityMatchesFilters_requiresSearchAndCategoryToMatch() {
+        XCTAssertTrue(ProgressSelectionPolicy.activityMatchesFilters(
+            name: "Bench Press",
+            category: .strength,
+            searchText: "bench",
+            selectedCategory: .strength
+        ))
+        XCTAssertFalse(ProgressSelectionPolicy.activityMatchesFilters(
+            name: "Bench Press",
+            category: .strength,
+            searchText: "row",
+            selectedCategory: .strength
+        ))
+    }
 }

@@ -14,6 +14,7 @@ struct ProgressTabView: View {
     @State private var selectedRange: ProgressDateRange = .threeMonths
     @State private var exportURL: URL? = nil
     @State private var showingShareSheet = false
+    @State private var showingActivityPicker = false
     @State private var isExporting = false
 
     private var profile: CDUserProfile? { profiles.first }
@@ -94,6 +95,12 @@ struct ProgressTabView: View {
                 if let url = exportURL {
                     ShareSheet(items: [url])
                 }
+            }
+            .sheet(isPresented: $showingActivityPicker) {
+                ActivityProgressPickerSheet(
+                    activities: activitiesWithData,
+                    selectedActivities: $selectedActivities
+                )
             }
             .onAppear {
                 reconcileSelections()
@@ -201,51 +208,85 @@ struct ProgressTabView: View {
     // MARK: Activity Picker
 
     private var activityPicker: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Activity Progress")
-                .font(.headline)
-
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 8) {
-                    ForEach(activitiesWithData) { activity in
-                        Button {
-                            if selectedActivities.contains(activity) {
-                                selectedActivities.remove(activity)
-                            } else {
-                                selectedActivities.insert(activity)
-                            }
-                        } label: {
-                            HStack(spacing: 6) {
-                                Image(systemName: activity.activityCategory.icon)
-                                    .font(.caption)
-                                Text(activity.name)
-                                    .font(.caption)
-                                    .fontWeight(.medium)
-                            }
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 7)
-                            .background(selectedActivities.contains(activity)
-                                ? AnyShapeStyle(
-                                    LinearGradient(
-                                        colors: [activity.activityCategory.color, GymTheme.electricBlue],
-                                        startPoint: .leading,
-                                        endPoint: .trailing
-                                    )
-                                )
-                                : AnyShapeStyle(Color.white.opacity(0.78)))
-                            .foregroundStyle(selectedActivities.contains(activity) ? .white : GymTheme.ink)
-                            .clipShape(Capsule())
-                            .overlay {
-                                Capsule()
-                                    .stroke(Color.white.opacity(selectedActivities.contains(activity) ? 0.0 : 0.65), lineWidth: 1)
-                            }
-                        }
-                        .buttonStyle(.plain)
-                    }
+        VStack(alignment: .leading, spacing: 12) {
+            HStack {
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Activity Progress")
+                        .font(.headline)
+                    Text(activityPickerSummary)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
-                .padding(.horizontal, 1)
+                Spacer()
+                Button {
+                    showingActivityPicker = true
+                } label: {
+                    Label("Choose", systemImage: "line.3.horizontal.decrease.circle")
+                        .font(.subheadline.weight(.semibold))
+                }
+                .buttonStyle(.bordered)
+                .disabled(activitiesWithData.isEmpty)
+            }
+
+            if selectedActivities.isEmpty {
+                Text("Choose an activity to review its trend.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(12)
+                    .background(Color.white.opacity(0.62))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+            } else {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(selectedActivities.sorted { $0.name < $1.name }) { activity in
+                            selectedActivityPill(activity)
+                        }
+                    }
+                    .padding(.horizontal, 1)
+                }
             }
         }
+        .padding(16)
+        .gymCard()
+    }
+
+    private var activityPickerSummary: String {
+        switch (selectedActivities.count, activitiesWithData.count) {
+        case (_, 0):
+            return "Complete workouts with activity entries to unlock trends."
+        case (0, let available):
+            return "\(available) activit\(available == 1 ? "y" : "ies") available"
+        case (let selected, let available):
+            return "\(selected) selected of \(available)"
+        }
+    }
+
+    private func selectedActivityPill(_ activity: CDActivity) -> some View {
+        Button {
+            selectedActivities.remove(activity)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: activity.activityCategory.icon)
+                    .font(.caption)
+                Text(activity.name)
+                    .font(.caption)
+                    .fontWeight(.medium)
+                Image(systemName: "xmark.circle.fill")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .foregroundStyle(GymTheme.ink)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 7)
+            .background(Color.white.opacity(0.78))
+            .clipShape(Capsule())
+            .overlay {
+                Capsule()
+                    .stroke(activity.activityCategory.color.opacity(0.45), lineWidth: 1)
+            }
+        }
+        .buttonStyle(.plain)
     }
 
     private var activitiesWithData: [CDActivity] {
@@ -497,18 +538,18 @@ struct ProgressTabView: View {
         if records.isEmpty {
             EmptyView()
         } else {
-        VStack(alignment: .leading, spacing: 12) {
-            Label("Personal Records", systemImage: "trophy.fill")
-                .font(.headline)
-                .foregroundStyle(.orange)
+            VStack(alignment: .leading, spacing: 12) {
+                Label("Personal Records", systemImage: "trophy.fill")
+                    .font(.headline)
+                    .foregroundStyle(.orange)
 
-            ForEach(records) { record in
-                PRRow(label: record.label, value: record.value)
+                ForEach(records) { record in
+                    PRRow(label: record.label, value: record.value)
+                }
             }
+            .padding(16)
+            .gymCard()
         }
-        .padding(16)
-        .gymCard()
-        } // end else
     }
 
     private func emptyChartPlaceholder(message: String) -> some View {
@@ -518,6 +559,114 @@ struct ProgressTabView: View {
             .multilineTextAlignment(.center)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 24)
+    }
+}
+
+private struct ActivityProgressPickerSheet: View {
+    let activities: [CDActivity]
+    @Binding var selectedActivities: Set<CDActivity>
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var searchText = ""
+    @State private var selectedCategory: ActivityCategory? = nil
+
+    private var categoriesWithData: [ActivityCategory] {
+        ActivityCategory.allCases.filter { category in
+            activities.contains { $0.activityCategory == category }
+        }
+    }
+
+    private var filteredActivities: [CDActivity] {
+        activities.filter {
+            ProgressSelectionPolicy.activityMatchesFilters(
+                name: $0.name,
+                category: $0.activityCategory,
+                searchText: searchText,
+                selectedCategory: selectedCategory
+            )
+        }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    Picker("Category", selection: $selectedCategory) {
+                        Text("All Categories").tag(ActivityCategory?.none)
+                        ForEach(categoriesWithData, id: \.self) { category in
+                            Label(category.displayName, systemImage: category.icon)
+                                .tag(Optional(category))
+                        }
+                    }
+                }
+
+                Section {
+                    if filteredActivities.isEmpty {
+                        ContentUnavailableView(
+                            "No Activities Found",
+                            systemImage: "magnifyingglass",
+                            description: Text("Try a different search or category.")
+                        )
+                    } else {
+                        ForEach(filteredActivities) { activity in
+                            Button {
+                                toggle(activity)
+                            } label: {
+                                HStack(spacing: 12) {
+                                    Image(systemName: activity.activityCategory.icon)
+                                        .foregroundStyle(activity.activityCategory.color)
+                                        .frame(width: 24)
+
+                                    VStack(alignment: .leading, spacing: 2) {
+                                        Text(activity.name)
+                                            .foregroundStyle(GymTheme.ink)
+                                        Text(activity.activityCategory.displayName)
+                                            .font(.caption)
+                                            .foregroundStyle(.secondary)
+                                    }
+
+                                    Spacer()
+
+                                    if selectedActivities.contains(activity) {
+                                        Image(systemName: "checkmark.circle.fill")
+                                            .foregroundStyle(GymTheme.electricBlue)
+                                    }
+                                }
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                } header: {
+                    Text("Activities")
+                } footer: {
+                    Text("\(selectedActivities.count) selected")
+                }
+            }
+            .navigationTitle("Choose Activities")
+            .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $searchText, placement: .navigationBarDrawer(displayMode: .always))
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Clear") {
+                        selectedActivities.removeAll()
+                    }
+                    .disabled(selectedActivities.isEmpty)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") {
+                        dismiss()
+                    }
+                }
+            }
+        }
+    }
+
+    private func toggle(_ activity: CDActivity) {
+        if selectedActivities.contains(activity) {
+            selectedActivities.remove(activity)
+        } else {
+            selectedActivities.insert(activity)
+        }
     }
 }
 

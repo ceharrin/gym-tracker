@@ -39,4 +39,16 @@ struct ProgressSelectionPolicy {
         guard availableItemCount > 0 else { return .noData }
         return selectedItemCount > 0 ? .ready : .needsSelection
     }
+
+    static func activityMatchesFilters(
+        name: String,
+        category: ActivityCategory,
+        searchText: String,
+        selectedCategory: ActivityCategory?
+    ) -> Bool {
+        let trimmedSearch = searchText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let matchesSearch = trimmedSearch.isEmpty || name.localizedCaseInsensitiveContains(trimmedSearch)
+        let matchesCategory = selectedCategory.map { $0 == category } ?? true
+        return matchesSearch && matchesCategory
+    }
 }

@@ -1,7 +1,6 @@
 import SwiftUI
 import CoreData
 import UIKit
-import UniformTypeIdentifiers
 
 struct ProfileView: View {
     @Environment(\.managedObjectContext) private var context
@@ -12,16 +11,9 @@ struct ProfileView: View {
 
     @State private var showingEdit = false
     @State private var showingActivityLibrary = false
-    @State private var backupShareURL: URL? = nil
-    @State private var showingBackupShare = false
     @State private var backupError: String? = nil
-    @State private var isExportingBackup = false
     @State private var isSavingICloudBackup = false
-    @State private var showingBackupImporter = false
-    @State private var isImportingBackup = false
     @State private var backupStatusMessage: String? = nil
-    @State private var pendingBackupImportURL: URL? = nil
-    @State private var pendingBackupImportWarning: LocalBackupImportWarning? = nil
 
     init() {
         _profiles = FetchRequest(fetchRequest: ManagedFetchRequests.profilesByCreatedAt(), animation: .default)
@@ -72,18 +64,6 @@ struct ProfileView: View {
             .sheet(isPresented: $showingActivityLibrary) {
                 ActivityLibraryView()
             }
-            .sheet(isPresented: $showingBackupShare, onDismiss: { backupShareURL = nil }) {
-                if let url = backupShareURL {
-                    ShareSheet(items: [url])
-                }
-            }
-            .fileImporter(
-                isPresented: $showingBackupImporter,
-                allowedContentTypes: [.json],
-                allowsMultipleSelection: false
-            ) { result in
-                handleBackupImport(result)
-            }
             .alert("Backup Error", isPresented: Binding(
                 get: { backupError != nil },
                 set: { if !$0 { backupError = nil } }
@@ -99,21 +79,6 @@ struct ProfileView: View {
                 Button("OK", role: .cancel) { backupStatusMessage = nil }
             } message: {
                 Text(backupStatusMessage ?? "")
-            }
-            .alert("Replace Local Data?", isPresented: Binding(
-                get: { pendingBackupImportWarning?.requiresConfirmation == true },
-                set: { if !$0 { pendingBackupImportWarning = nil; pendingBackupImportURL = nil } }
-            )) {
-                Button("Replace", role: .destructive) {
-                    guard let fileURL = pendingBackupImportURL else { return }
-                    beginBackupImport(from: fileURL)
-                }
-                Button("Cancel", role: .cancel) {
-                    pendingBackupImportURL = nil
-                    pendingBackupImportWarning = nil
-                }
-            } message: {
-                Text(pendingBackupImportWarning?.message ?? "")
             }
         }
     }
@@ -140,29 +105,9 @@ struct ProfileView: View {
             Label("Local Data & Backup", systemImage: "externaldrive.badge.checkmark")
                 .font(.headline)
 
-            Text("GymTracker stores your data on this device. Save a backup before deleting the app or moving to a new phone; iCloud backups are files in iCloud Drive, not automatic device sync.")
+            Text("GymTracker stores your data on this device. Save a backup to iCloud Drive before deleting the app or moving to a new phone.")
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
-
-            Button {
-                exportBackup()
-            } label: {
-                HStack {
-                    if isExportingBackup {
-                        SwiftUI.ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        Image(systemName: "square.and.arrow.up")
-                    }
-                    Text(isExportingBackup ? "Preparing Backup..." : "Export Local Backup")
-                    Spacer()
-                }
-                .padding(14)
-                .background(GymTheme.electricBlue.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .disabled(isBackupBusy || !hasMeaningfulBackupData)
 
             Button {
                 saveBackupToICloud()
@@ -184,29 +129,9 @@ struct ProfileView: View {
             .buttonStyle(.plain)
             .disabled(isBackupBusy || !hasMeaningfulBackupData)
 
-            Button {
-                showingBackupImporter = true
-            } label: {
-                HStack {
-                    if isImportingBackup {
-                        SwiftUI.ProgressView()
-                            .controlSize(.small)
-                    } else {
-                        Image(systemName: "square.and.arrow.down")
-                    }
-                    Text(isImportingBackup ? "Importing Backup..." : "Import Local Backup")
-                    Spacer()
-                }
-                .padding(14)
-                .background(GymTheme.buttonBackground.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
-            }
-            .buttonStyle(.plain)
-            .disabled(isBackupBusy)
-
             Text(hasMeaningfulBackupData
-                 ? "Importing a backup replaces the current local data on this device."
-                 : "Add a workout, measurement, custom activity, or profile details before exporting your first backup.")
+                 ? "Backups are saved as GymTracker JSON files in iCloud Drive."
+                 : "Add a workout, measurement, custom activity, or profile details before saving your first backup.")
                 .font(.caption)
                 .foregroundStyle(GymTheme.steel)
         }
@@ -215,21 +140,7 @@ struct ProfileView: View {
     }
 
     private var isBackupBusy: Bool {
-        isExportingBackup || isSavingICloudBackup || isImportingBackup
-    }
-
-    private func exportBackup() {
-        guard !isExportingBackup else { return }
-        isExportingBackup = true
-        Task { @MainActor in
-            defer { isExportingBackup = false }
-            do {
-                backupShareURL = try LocalBackupExporter.exportBackup(from: context)
-                showingBackupShare = true
-            } catch {
-                backupError = error.localizedDescription
-            }
-        }
+        isSavingICloudBackup
     }
 
     private func saveBackupToICloud() {
@@ -246,46 +157,8 @@ struct ProfileView: View {
         }
     }
 
-    private func handleBackupImport(_ result: Result<[URL], Error>) {
-        guard !isImportingBackup else { return }
-
-        switch result {
-        case .success(let urls):
-            guard let fileURL = urls.first else { return }
-            let warning = LocalBackupExporter.importWarning(
-                workoutCount: workouts.count,
-                measurementCount: measurements.count,
-                customActivityCount: customActivities.count,
-                hasProfileDetails: hasMeaningfulProfileDetails
-            )
-            if warning.requiresConfirmation {
-                pendingBackupImportURL = fileURL
-                pendingBackupImportWarning = warning
-            } else {
-                beginBackupImport(from: fileURL)
-            }
-        case .failure(let error):
-            backupError = error.localizedDescription
-        }
-    }
-
     private var hasMeaningfulProfileDetails: Bool {
         profile.map(LocalBackupExporter.hasMeaningfulProfileDetails) ?? false
-    }
-
-    private func beginBackupImport(from fileURL: URL) {
-        pendingBackupImportURL = nil
-        pendingBackupImportWarning = nil
-        isImportingBackup = true
-        Task { @MainActor in
-            defer { isImportingBackup = false }
-            do {
-                try LocalBackupExporter.importBackup(from: fileURL, into: context)
-                backupStatusMessage = "Your local GymTracker data was restored from the selected backup."
-            } catch {
-                backupError = error.localizedDescription
-            }
-        }
     }
 }
 
